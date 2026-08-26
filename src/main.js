@@ -144,6 +144,11 @@ async function loginFlow(task, { name = null, demo = false } = {}) {
   }
 }
 
+async function createAccountAndSignIn({ name, email, password, demo = false }) {
+  await auth.signUp({ name, email, password });
+  return auth.signIn({ email, password, rememberMe: true });
+}
+
 function bindAuth() {
   $('#signInTab').addEventListener('click', () => setAuthTab('signin'));
   $('#signUpTab').addEventListener('click', () => setAuthTab('signup'));
@@ -166,14 +171,14 @@ function bindAuth() {
     if (!email || !email.includes('@')) return authMessage('Enter a valid email address.');
     if (password.length < 10) return authMessage('Use at least 10 characters for your password.');
     if (password !== confirm) return authMessage('The passwords do not match.');
-    loginFlow(() => auth.signUp({ name, email, password }), { name, demo: false });
+    loginFlow(() => createAccountAndSignIn({ name, email, password, demo: false }), { name, demo: false });
   });
 
   $('#demoAccess').addEventListener('click', () => {
     const id = crypto.randomUUID().replaceAll('-', '').slice(0, 18);
     const email = `demo-${id}@demo.advocate.app`;
     const password = `Demo-${crypto.randomUUID()}-9a!`;
-    loginFlow(() => auth.signUp({ name: 'Jordan Lee', email, password }), { name: 'Jordan Lee', demo: true });
+    loginFlow(() => createAccountAndSignIn({ name: 'Jordan Lee', email, password, demo: true }), { name: 'Jordan Lee', demo: true });
   });
 }
 
