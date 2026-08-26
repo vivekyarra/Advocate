@@ -4,11 +4,11 @@ import path from 'node:path';
 
 const root = path.resolve(new URL('..', import.meta.url).pathname);
 const dist = path.join(root, 'dist');
-const required = ['index.html', 'favicon.svg', 'LICENSE', 'README.md', 'src/main.js', 'src/cloud.js', 'src/webmcp.js', 'src/domain.js', 'src/repository.js', 'src/ui.js', 'src/styles.css'];
+const required = ['index.html', 'favicon.svg', 'LICENSE', 'README.md', 'src/main.js', 'src/cloud.js', 'src/webmcp.js', 'src/domain.js', 'src/repository.js', 'src/ui.js', 'src/styles.css', 'src/judge-polish.js', 'src/judge-polish.css'];
 
 for (const file of required) await access(path.join(root, file), constants.R_OK);
 
-const filesToScan = ['index.html', 'README.md', 'src/main.js', 'src/cloud.js', 'src/webmcp.js', 'src/domain.js', 'src/ui.js', 'src/styles.css'];
+const filesToScan = ['index.html', 'README.md', 'src/main.js', 'src/cloud.js', 'src/webmcp.js', 'src/domain.js', 'src/ui.js', 'src/styles.css', 'src/judge-polish.js', 'src/judge-polish.css'];
 for (const file of filesToScan) {
   const content = await readFile(path.join(root, file), 'utf8');
   if (new RegExp(`\\b${['No', 'Hold'].join('')}\\b`, 'i').test(content)) throw new Error(`Legacy product name found in ${file}`);
@@ -24,6 +24,14 @@ for (const id of ['authView','signInForm','signUpForm','demoAccess','appView','p
 }
 const main = await readFile(path.join(root, 'src/main.js'), 'utf8');
 if (main.includes('alert(')) throw new Error('Blocking alert UI is not allowed in the production shell.');
+if (!main.includes("from './judge-polish.js'")) throw new Error('Judge-ready UX layer is not wired into the product bootstrap.');
+
+const polishJs = await readFile(path.join(root, 'src/judge-polish.js'), 'utf8');
+const polishCss = await readFile(path.join(root, 'src/judge-polish.css'), 'utf8');
+for (const requiredCapability of ['get_notifications', 'mark_notifications_read', 'Agent-ready', 'notificationButton']) {
+  if (!polishJs.includes(requiredCapability)) throw new Error(`Missing judge-ready capability: ${requiredCapability}`);
+}
+if (!polishCss.includes('.auth-shell { height: 100svh') || !polishCss.includes('.sidebar {')) throw new Error('Single-viewport laptop layout guardrails are missing.');
 
 await rm(dist, { recursive: true, force: true });
 await mkdir(path.join(dist, 'src'), { recursive: true });
