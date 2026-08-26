@@ -1,7 +1,30 @@
 /* Judge-ready viewport polish and live notification center */
 
+/* Keep all top-right account controls in a predictable, clickable stacking order. */
+.topbar-right {
+  position: relative;
+  isolation: isolate;
+}
+.profile-menu-wrap {
+  position: relative;
+  z-index: 100;
+  pointer-events: auto;
+}
+.profile-button {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+.profile-menu {
+  z-index: 110;
+  pointer-events: auto;
+}
+.profile-menu button { pointer-events: auto; }
+
 .capability-pill-clickable {
   position: relative;
+  z-index: 20;
   cursor: pointer;
   user-select: none;
   transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
@@ -34,7 +57,7 @@
 .capability-panel small { margin-top: 8px; color: var(--muted); font-size: 11px; line-height: 1.45; }
 .capability-panel .capability-state { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; color: var(--success); font-weight: 800; }
 
-.notification-wrap { position: relative; }
+.notification-wrap { position: relative; z-index: 80; }
 .notification-button {
   position: relative;
   display: grid;
@@ -68,7 +91,7 @@
 }
 .notification-menu {
   position: absolute;
-  z-index: 80;
+  z-index: 90;
   top: calc(100% + 9px);
   right: 0;
   width: min(390px, calc(100vw - 28px));
