@@ -9,6 +9,24 @@ const requiredTools = [
   'file_dispute_record'
 ];
 
+function claimPayload({ clause, penalty, proof = 'a'.repeat(64) }) {
+  return {
+    case_id: 'INV-0427',
+    claimant: 'Northstar Studio LLC',
+    counterparty: 'Atlas Procurement Inc.',
+    clause_id: clause.clause_id,
+    breach_clause: clause.heading,
+    jurisdiction: 'CA',
+    delay_days: clause.breach_delay_days,
+    base_amount: penalty.base_amount,
+    statutory_penalty: penalty.statutory_penalty,
+    claim_total: penalty.claim_total,
+    statutory_citation: penalty.statutory_citation,
+    authorization_proof: proof,
+    approved_at: '2026-08-27T00:00:00.000Z'
+  };
+}
+
 test('exposes the four challenge WebMCP tools with closed JSON schemas', () => {
   const tools = createToolDefinitions();
   assert.deepEqual(tools.map((tool) => tool.name), requiredTools);
@@ -17,6 +35,8 @@ test('exposes the four challenge WebMCP tools with closed JSON schemas', () => {
     assert.equal(tool.inputSchema.additionalProperties, false);
     assert.equal(typeof tool.execute, 'function');
   }
+  const notice = tools.find((tool) => tool.name === 'generate_enforceable_demand_notice');
+  assert.equal(notice.inputSchema.properties.claim_payload.additionalProperties, false);
 });
 
 test('rejects malformed typed tool payloads before execution', () => {
@@ -27,23 +47,22 @@ test('rejects malformed typed tool payloads before execution', () => {
   assert.match(result.errors.join(' '), /surprise/);
 });
 
-test('executes breach-to-receipt pipeline and makes filing idempotent', async () => {
+test('executes the corrected breach-to-receipt pipeline and makes filing idempotent', async () => {
   const events = [];
   const runtime = createWebMcpRuntime({ telemetrySink: (event) => events.push(event) });
   const clause = await runtime.invoke('fetch_contract_clause', { clause_id: 'payment_terms_7_4' }, 'test-agent');
   assert.equal(clause.clause.breach_term, '15 calendar days');
+  assert.equal(clause.clause.days_after_acceptance, 47);
+  assert.equal(clause.clause.breach_delay_days, 32);
 
-  const penalty = await runtime.invoke('compute_statutory_penalty', { jurisdiction: 'CA', delay_days: 47, base_amount: 12840 }, 'test-agent');
-  assert.equal(penalty.claim_total, 13005.34);
+  const penalty = await runtime.invoke('compute_statutory_penalty', { jurisdiction: 'CA', delay_days: clause.clause.breach_delay_days, base_amount: 12840 }, 'test-agent');
+  assert.equal(penalty.claim_total, 12952.57);
+  assert.equal(penalty.statutory_penalty, 112.57);
   assert.equal(penalty.statutory_citation, 'Cal. Civ. Code § 3289(b)');
 
   const proof = 'a'.repeat(64);
   const generated = await runtime.invoke('generate_enforceable_demand_notice', {
-    claim_payload: {
-      claimant: 'Northstar Studio LLC', counterparty: 'Atlas Procurement Inc.',
-      claim_total: penalty.claim_total, statutory_citation: penalty.statutory_citation,
-      breach_clause: clause.clause.heading, authorization_proof: proof
-    }
+    claim_payload: claimPayload({ clause: clause.clause, penalty, proof })
   }, 'test-agent');
   assert.match(generated.notice.action_id, /^ACT-/);
 

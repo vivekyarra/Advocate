@@ -8,18 +8,29 @@ const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matc
 
 const ui = {
   systemStatus: $('systemStatus'), protocolBadge: $('protocolBadge'), executeFlow: $('executeFlow'), runId: $('runId'),
-  claimTicker: $('claimTicker'), latencyTicker: $('latencyTicker'), ledgerTicker: $('ledgerTicker'),
-  auditState: $('auditState'), entitlementState: $('entitlementState'), breachLine: $('breachLine'), auditFoot: $('auditFoot'), breachBadge: $('breachBadge'), evidenceState: $('evidenceState'),
+  claimTicker: $('claimTicker'), delayTicker: $('delayTicker'), delayAmount: document.querySelector('.calc-ledger > div:nth-child(2) strong'), latencyTicker: $('latencyTicker'), ledgerTicker: $('ledgerTicker'),
+  auditState: $('auditState'), entitlementState: $('entitlementState'), breachLine: $('breachLine'), auditFoot: $('auditFoot'), breachBadge: $('breachBadge'),
   claimAmount: $('claimAmount'), penaltyAmount: $('penaltyAmount'), citation: $('citation'), claimDelta: $('claimDelta'),
   telemetryStream: $('telemetryStream'), telemetryEmpty: $('telemetryEmpty'),
   receiptCard: $('receiptCard'), receiptAction: $('receiptAction'), receiptTimestamp: $('receiptTimestamp'), receiptClaimHash: $('receiptClaimHash'), receiptHash: $('receiptHash'), receiptCitation: $('receiptCitation'), downloadReceipt: $('downloadReceipt'),
-  authorizationModal: $('authorizationModal'), authorizeAction: $('authorizeAction'), cancelAuthorization: $('cancelAuthorization'), modalClaim: $('modalClaim'), modalCitation: $('modalCitation'), modalIntentHash: $('modalIntentHash')
+  authorizationModal: $('authorizationModal'), authorizeAction: $('authorizeAction'), cancelAuthorization: $('cancelAuthorization'), modalClaim: $('modalClaim'), modalCitation: $('modalCitation'), modalIntentHash: $('modalIntentHash'),
+  shell: document.querySelector('.shell')
 };
+
+ui.delayTicker.textContent = '32d';
+if (ui.delayAmount) ui.delayAmount.textContent = '32 days overdue';
+ui.systemStatus.setAttribute('role', 'status');
+ui.systemStatus.setAttribute('aria-live', 'polite');
+ui.receiptCard.setAttribute('aria-atomic', 'true');
+const modalDescription = ui.authorizationModal.querySelector('p');
+if (modalDescription) {
+  modalDescription.id ||= 'authorizationDescription';
+  ui.authorizationModal.setAttribute('aria-describedby', modalDescription.id);
+}
 
 let runtime;
 let downloadableReceipt = null;
 let currentRun = null;
-let telemetryCount = 0;
 
 function setClock() {
   $('clock').textContent = new Intl.DateTimeFormat('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(new Date());
@@ -27,9 +38,14 @@ function setClock() {
 setClock();
 setInterval(setClock, 1000);
 
+function setSystemStatus(status) {
+  ui.systemStatus.textContent = status;
+}
+
 function safeJson(value) {
   try {
     const text = JSON.stringify(value);
+    if (text === undefined) return String(value);
     return text.length > 210 ? `${text.slice(0, 207)}…` : text;
   } catch { return '[unserializable]'; }
 }
@@ -39,18 +55,31 @@ function renderTelemetry(event) {
   const node = document.createElement('div');
   node.className = `telemetry-event ${event.kind || 'call'}`;
   const kind = (event.kind || 'EVENT').toUpperCase();
-  const latency = typeof event.latency_ms === 'number' ? `${event.latency_ms.toFixed(1)} ms` : event.kind === 'schema' ? (event.valid ? 'VALID' : 'INVALID') : '—';
+  const latency = typeof event.latency_ms === 'number'
+    ? `${event.latency_ms.toFixed(1)} ms`
+    : event.kind === 'schema'
+      ? (event.valid ? 'VALID' : 'INVALID')
+      : '—';
   const payload = event.kind === 'result' ? event.output : event.input ?? event.error ?? event.source;
-  node.innerHTML = `
-    <div class="telemetry-event-head">
-      <span class="telemetry-kind">${kind}</span>
-      <span class="telemetry-tool">${event.tool || 'webmcp.runtime'}</span>
-      <span class="telemetry-latency ${event.kind === 'schema' && event.valid ? 'telemetry-valid' : ''}">${latency}</span>
-    </div>
-    <div class="telemetry-payload"></div>`;
-  node.querySelector('.telemetry-payload').textContent = safeJson(payload);
+
+  const head = document.createElement('div');
+  head.className = 'telemetry-event-head';
+  const kindNode = document.createElement('span');
+  kindNode.className = 'telemetry-kind';
+  kindNode.textContent = kind;
+  const toolNode = document.createElement('span');
+  toolNode.className = 'telemetry-tool';
+  toolNode.textContent = event.tool || 'webmcp.runtime';
+  const latencyNode = document.createElement('span');
+  latencyNode.className = `telemetry-latency ${event.kind === 'schema' && event.valid ? 'telemetry-valid' : ''}`;
+  latencyNode.textContent = latency;
+  const payloadNode = document.createElement('div');
+  payloadNode.className = 'telemetry-payload';
+  payloadNode.textContent = safeJson(payload);
+  head.append(kindNode, toolNode, latencyNode);
+  node.append(head, payloadNode);
+
   ui.telemetryStream.prepend(node);
-  telemetryCount += 1;
   while (ui.telemetryStream.children.length > 7) ui.telemetryStream.lastElementChild?.remove();
   if (typeof event.latency_ms === 'number') ui.latencyTicker.textContent = `${event.latency_ms.toFixed(1)} ms`;
 }
@@ -99,34 +128,80 @@ function waitForHumanAuthorization(summary, intentHash) {
   ui.modalClaim.textContent = money(summary.claim_total);
   ui.modalCitation.textContent = summary.statutory_citation;
   ui.modalIntentHash.textContent = compactHash(intentHash);
+
+  const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : ui.executeFlow;
+  const previousOverflow = document.body.style.overflow;
   ui.authorizationModal.hidden = false;
+  ui.shell.inert = true;
+  document.body.style.overflow = 'hidden';
   ui.authorizeAction.focus();
 
   return new Promise((resolve, reject) => {
-    const approve = async () => {
-      cleanup();
-      const approvedAt = new Date().toISOString();
-      const proofHash = await sha256({
-        action: 'AUTHORIZE_ENFORCEMENT',
-        intent_hash: intentHash,
-        approved_at: approvedAt,
-        nonce: crypto.randomUUID(),
-        gesture: 'single-click'
-      });
-      ui.authorizationModal.hidden = true;
-      resolve({ proofHash, approvedAt });
-    };
-    const cancel = () => {
-      cleanup();
-      ui.authorizationModal.hidden = true;
-      reject(new Error('Human authorization declined'));
-    };
+    let settled = false;
+
     const cleanup = () => {
+      ui.authorizationModal.removeEventListener('keydown', onKeyDown);
       ui.authorizeAction.removeEventListener('click', approve);
       ui.cancelAuthorization.removeEventListener('click', cancel);
+      ui.authorizeAction.disabled = false;
+      ui.cancelAuthorization.disabled = false;
+      ui.authorizationModal.hidden = true;
+      ui.shell.inert = false;
+      document.body.style.overflow = previousOverflow;
+      if (previousFocus?.isConnected) previousFocus.focus();
     };
-    ui.authorizeAction.addEventListener('click', approve, { once: true });
-    ui.cancelAuthorization.addEventListener('click', cancel, { once: true });
+
+    const finish = (callback) => {
+      cleanup();
+      callback();
+    };
+
+    const approve = async () => {
+      if (settled) return;
+      settled = true;
+      ui.authorizeAction.disabled = true;
+      ui.cancelAuthorization.disabled = true;
+      try {
+        const approvedAt = new Date().toISOString();
+        const proofHash = await sha256({
+          action: 'AUTHORIZE_ENFORCEMENT',
+          intent_hash: intentHash,
+          approved_at: approvedAt,
+          nonce: crypto.randomUUID(),
+          gesture: 'single-click'
+        });
+        finish(() => resolve({ proofHash, approvedAt }));
+      } catch (error) {
+        finish(() => reject(error));
+      }
+    };
+
+    const cancel = () => {
+      if (settled) return;
+      settled = true;
+      finish(() => reject(new Error('Human authorization declined')));
+    };
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        cancel();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+      const controls = [ui.authorizeAction, ui.cancelAuthorization].filter((control) => !control.disabled);
+      if (!controls.length) return;
+      const currentIndex = controls.indexOf(document.activeElement);
+      const nextIndex = event.shiftKey
+        ? (currentIndex <= 0 ? controls.length - 1 : currentIndex - 1)
+        : (currentIndex === controls.length - 1 ? 0 : currentIndex + 1);
+      event.preventDefault();
+      controls[nextIndex].focus();
+    };
+
+    ui.authorizeAction.addEventListener('click', approve);
+    ui.cancelAuthorization.addEventListener('click', cancel);
+    ui.authorizationModal.addEventListener('keydown', onKeyDown);
   });
 }
 
@@ -194,8 +269,9 @@ async function runEnforcementFlow() {
   currentRun = `RUN-${Date.now().toString(36).toUpperCase()}`;
   ui.runId.textContent = currentRun;
   ui.executeFlow.disabled = true;
+  ui.executeFlow.setAttribute('aria-busy', 'true');
   ui.executeFlow.classList.add('running');
-  ui.systemStatus.textContent = 'FLOW ACTIVE';
+  setSystemStatus('FLOW ACTIVE');
 
   try {
     setStage(1, 'active');
@@ -203,8 +279,11 @@ async function runEnforcementFlow() {
     await sleep(330);
     const clauseResult = await runtime.invoke('fetch_contract_clause', { clause_id: 'payment_terms_7_4' }, 'advocate-demo-agent');
     const clause = clauseResult.clause;
+    const delayDays = clause.breach_delay_days;
+    ui.delayTicker.textContent = `${delayDays}d`;
+    if (ui.delayAmount) ui.delayAmount.textContent = `${delayDays} days overdue`;
     ui.breachLine.classList.add('detected');
-    ui.auditFoot.textContent = `${clause.breach_term} term exceeded by 32 days`;
+    ui.auditFoot.textContent = `${clause.breach_term} term exceeded by ${delayDays} days`;
     ui.breachBadge.classList.add('detected'); ui.breachBadge.textContent = 'BREACH VERIFIED';
     ui.auditState.className = 'state-pill complete'; ui.auditState.textContent = 'VERIFIED';
     setStage(1, 'complete');
@@ -212,7 +291,7 @@ async function runEnforcementFlow() {
     setStage(2, 'active');
     ui.entitlementState.classList.add('active'); ui.entitlementState.textContent = 'CALCULATING';
     await sleep(280);
-    const penalty = await runtime.invoke('compute_statutory_penalty', { jurisdiction: 'CA', delay_days: 47, base_amount: 12840 }, 'advocate-demo-agent');
+    const penalty = await runtime.invoke('compute_statutory_penalty', { jurisdiction: 'CA', delay_days: delayDays, base_amount: 12840 }, 'advocate-demo-agent');
     ui.penaltyAmount.textContent = money(penalty.statutory_penalty);
     ui.citation.textContent = penalty.statutory_citation;
     ui.claimDelta.textContent = `${money(penalty.base_amount)} + ${money(penalty.statutory_penalty)} statutory component`;
@@ -222,25 +301,30 @@ async function runEnforcementFlow() {
     setStage(2, 'complete');
 
     setStage(3, 'active');
-    ui.systemStatus.textContent = 'AWAITING HUMAN';
+    setSystemStatus('AWAITING HUMAN');
     const intentPayload = {
-      case_id: 'INV-0427', claimant: 'Northstar Studio LLC', counterparty: 'Atlas Procurement Inc.',
-      clause_id: clause.clause_id, breach_clause: clause.heading, base_amount: penalty.base_amount,
-      statutory_penalty: penalty.statutory_penalty, claim_total: penalty.claim_total, statutory_citation: penalty.statutory_citation
+      case_id: 'INV-0427',
+      claimant: 'Northstar Studio LLC',
+      counterparty: 'Atlas Procurement Inc.',
+      clause_id: clause.clause_id,
+      breach_clause: clause.heading,
+      jurisdiction: 'CA',
+      delay_days: delayDays,
+      base_amount: penalty.base_amount,
+      statutory_penalty: penalty.statutory_penalty,
+      claim_total: penalty.claim_total,
+      statutory_citation: penalty.statutory_citation
     };
     const intentHash = await sha256(intentPayload);
     const authorization = await waitForHumanAuthorization(penalty, intentHash);
     setStage(3, 'complete');
 
     setStage(4, 'active');
-    ui.systemStatus.textContent = 'AGENT EXECUTING';
+    setSystemStatus('AGENT EXECUTING');
     await sleep(220);
     const noticeResult = await runtime.invoke('generate_enforceable_demand_notice', {
       claim_payload: {
         ...intentPayload,
-        claimant: 'Northstar Studio LLC',
-        counterparty: 'Atlas Procurement Inc.',
-        delay_days: 47,
         authorization_proof: authorization.proofHash,
         approved_at: authorization.approvedAt
       }
@@ -257,16 +341,17 @@ async function runEnforcementFlow() {
     populateReceipt(noticeResult.notice, filingResult.receipt, penalty);
     ui.ledgerTicker.textContent = String(runtime.receiptCount).padStart(2, '0');
     setStage(5, 'complete');
-    ui.systemStatus.textContent = 'RECEIPT VERIFIED';
+    setSystemStatus('RECEIPT VERIFIED');
     ui.receiptCard.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'nearest' });
   } catch (error) {
     const active = document.querySelector('.stage.is-active');
     if (active) setStage(Number(active.dataset.stage), 'error');
-    ui.systemStatus.textContent = error instanceof Error && error.message.includes('declined') ? 'RUN CANCELLED' : 'FLOW HALTED';
+    setSystemStatus(error instanceof Error && error.message.includes('declined') ? 'RUN CANCELLED' : 'FLOW HALTED');
     renderTelemetry({ kind: 'error', tool: 'flow.controller', error: error instanceof Error ? error.message : String(error), at: new Date().toISOString() });
   } finally {
     currentRun = null;
     ui.executeFlow.disabled = false;
+    ui.executeFlow.removeAttribute('aria-busy');
     ui.executeFlow.classList.remove('running');
   }
 }
@@ -293,4 +378,4 @@ if (installation.native) {
 } else {
   ui.protocolBadge.textContent = `WEBMCP · MIRROR ${runtime.tools.length}/4`;
 }
-renderTelemetry({ kind: 'runtime', tool: 'webmcp.registration', source: installation.native ? `${installation.registered} native browser tools registered` : 'Canonical API unavailable; window.__webmcp mirror armed', at: new Date().toISOString() });
+renderTelemetry({ kind: 'runtime', tool: 'webmcp.registration', source: installation.native ? `${installation.registered} native browser tools registered` : 'Canonical API unavailable or registration incomplete; window.__webmcp mirror armed', at: new Date().toISOString() });

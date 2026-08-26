@@ -1,14 +1,14 @@
 {
   "name": "advocate-webmcp",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
   "description": "Advocate — autonomous browser-native enforcement mission control for the OpenAI WebMCP Challenge.",
   "scripts": {
     "dev": "node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",
-    "lint": "node --check src/main.js && node --check src/webmcp.js && node --check scripts/build.mjs && node --check scripts/serve.mjs && node --check tests/overhaul.test.mjs",
-    "test": "node --test tests/overhaul.test.mjs",
+    "lint": "node --check src/main.js && node --check src/webmcp.js && node --check scripts/build.mjs && node --check scripts/serve.mjs && node --check tests/overhaul.test.mjs && node --check tests/hardening.test.mjs",
+    "test": "node --test tests/overhaul.test.mjs tests/hardening.test.mjs",
     "build": "node scripts/build.mjs",
     "check": "npm run lint && npm run test && npm run build"
   },
