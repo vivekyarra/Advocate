@@ -2,204 +2,196 @@
 
 > **Your agent should fix your bill, not open a support ticket.**
 
-Advocate is a WebMCP-native customer account portal that combines a normal, polished broadband account experience with structured browser tools an authorized agent can use to investigate and resolve billing problems.
+Advocate is a WebMCP-native broadband account portal where a customer and an authorized browser agent can investigate a billing problem together, verify real entitlements, apply approved credits/refunds, and optionally change a plan — against the same authenticated account state the human sees.
 
-**Live product:** https://advocate-live-cinevault7-8566s-projects.vercel.app
+**Live product:** https://advocate-live.vercel.app/
 
-## Product experience
+## Judge it in 60 seconds
 
-Advocate now behaves like an actual account product rather than a hackathon control panel:
+1. Open the live product in ChatGPT's in-app browser or Chrome 149+ with WebMCP enabled.
+2. Choose **Explore with an isolated live demo account**. No shared credentials are required.
+3. Ask:
 
-- create an account or sign in with email and password
-- open an isolated live demo account without sharing credentials with other judges
-- persistent authenticated profile and broadband account data
-- full account overview, billing, usage, outage, plans, support, profile, and settings screens
-- editable name, phone, service address, timezone, communication preferences, autopay, and paperless settings
-- real password-change flow through managed authentication
-- persisted support requests with request history
-- real statement views and print-friendly statement/receipt flows
-- explicit confirmation dialogs for plan changes and bill-changing actions
-- responsive desktop, tablet, and mobile navigation
-- signed-in WebMCP tools bound to the same account state the customer sees
+> My bill is way higher than usual and my internet was down on Saturday. Find out why and fix anything I'm entitled to, but ask me before changing my plan.
 
-The live challenge scenario is still available to every account, but each user gets their own persistent copy rather than a shared global demo record.
+4. The agent can use `investigate_bill_issue` to gather the complete evidence trail in one read-only operation while the normal account UI updates with the findings.
+5. In **Resolution center**, choose **Fix bill only**.
+6. The agent can call `apply_approved_resolution`. The backend re-checks the human approval, applies the eligible $12.80 outage credit and $10.37 invalid-fee refund, and returns a receipt.
+7. The balance moves from **$94.37 → $71.20**. The plan does **not** change because no plan was approved.
 
-## The 15-second WebMCP demo
+Try the negative case too: ask the agent to change the plan after approving only the bill fixes. The plan write is rejected because the approval is scoped to an exact plan ID.
 
-Open the live app in a WebMCP-aware browser, choose **Explore live demo**, then say:
+## Why this is a strong WebMCP use case
 
-> “My bill is way higher than usual and my internet was down on Saturday. Find out why and fix anything I’m entitled to, but ask me before changing my plan.”
+Customer-support portals are a poor fit for DOM guessing. A billing investigation crosses statements, line items, outage history, policy eligibility, plan comparisons, approvals, and money-moving actions. A generic browser agent has to infer what every control means and whether an action is safe.
 
-The seeded billing scenario starts with:
+Advocate exposes those account capabilities directly through `document.modelContext.registerTool()` with explicit JSON Schema contracts. The human and the agent share the same signed-in state and the same visible product surface:
 
-- Current bill: **$94.37**
-- Previous bill: **$59.00**
-- Confirmed Aug 22 outage: **6h 42m**
-- Expired promotion: **+$25.00**
-- Incorrect installation fee: **+$10.37**
-- Eligible outage credit: **$12.80**
-- Total recoverable now: **$23.17**
-- Equivalent plan: **$67/mo**, saving **$17/mo**
+- the **agent** is good at gathering evidence, comparing records, and executing structured actions;
+- the **human** remains the authority for sensitive choices;
+- the **site/backend** enforces what either party is actually allowed to do.
 
-After the customer approves **Fix bill only**, the outage credit and invalid-fee refund are written to the account ledger and the balance becomes **$71.20**. A plan change remains blocked unless the customer separately approves the exact plan.
+This is not a chat widget layered over a portal. WebMCP is the interaction layer that lets an external browser agent safely operate the product.
 
-## Real backend and identity
+## 16 browser-native WebMCP tools
 
-The production app uses **Neon Postgres + Neon Auth + Neon Data API**.
+Advocate exposes two intent-level tools for reliable task completion and fourteen granular tools for inspectability, composability, and agent choice.
 
-Authentication, profiles, account records, bills, charges, outages, ledger entries, approvals, activity, usage, support requests, and settings are persisted server-side. The browser never receives database credentials.
-
-Security boundaries are enforced in the database layer as well as the UI:
-
-- all application tables use PostgreSQL Row Level Security
-- authenticated users can read only their own account-scoped data
-- anonymous direct table access is revoked
-- authenticated clients cannot directly insert/update/delete protected account tables
-- sensitive changes go through scoped database functions that re-check the authenticated user and required approval
-- outage credits and charge refunds have database uniqueness constraints, so retries cannot create duplicate money movements
-- plan changes require an approval for the exact target plan ID
-- demo reset is permitted only on accounts created as demo accounts
-
-## Why WebMCP is essential
-
-A normal browser agent must infer intent from UI text, navigate pages, and actuate controls. Advocate exposes the account’s authorized capabilities directly with JSON Schema contracts. The page and the agent share one source of truth, so tool calls update the same account the customer is viewing.
-
-The app uses the current imperative API (`document.modelContext.registerTool`) and follows WebMCP security guidance:
-
-- explicit JSON Schemas for every tool
-- `readOnlyHint: true` on inspection tools
-- `readOnlyHint: false` on account-changing tools
-- concise first-party tool outputs
-- human approval enforced in application/database state, not merely suggested in prose
-- idempotent monetary writes
-
-## WebMCP tool surface
+### Intent-level workflow
 
 | Tool | Purpose | Mutates account? |
 | --- | --- | --- |
-| `get_current_bill` | Read current amount due and plan | No |
-| `get_previous_bills` | Read prior statements | No |
-| `compare_bills` | Explain exact month-over-month change | No |
-| `get_outage_history` | Read confirmed outage events | No |
-| `explain_charge` | Explain a bill charge | No |
+| `investigate_bill_issue` | End-to-end evidence collection: compare bills, verify outage credit, validate suspicious charges, and surface a plan opportunity | No |
+| `apply_approved_resolution` | Apply only the resolution already approved by the human; underlying controls re-check approval and idempotency | **Yes** |
+
+### Granular capability surface
+
+| Tool | Purpose | Mutates account? |
+| --- | --- | --- |
+| `get_current_bill` | Current amount due, due date, status, plan | No |
+| `get_previous_bills` | Previous statements | No |
+| `compare_bills` | Exact month-over-month changes | No |
+| `get_outage_history` | Confirmed outage events | No |
+| `explain_charge` | Explain a current charge | No |
 | `check_credit_eligibility` | Verify outage-credit entitlement | No |
-| `check_charge_validity` | Validate/refundability check | No |
-| `list_plan_options` | Compare available plans | No |
-| `get_resolution_summary` | Build exact proposed resolution | No |
-| `get_approval_status` | Read current human approval scope | No |
-| `apply_outage_credit` | Write eligible outage credit to ledger | **Yes** |
-| `refund_invalid_charge` | Write invalid-fee refund to ledger | **Yes** |
-| `change_plan` | Change plan after exact-plan approval | **Yes** |
-| `get_resolution_receipt` | Read final receipt | No |
+| `check_charge_validity` | Verify whether a charge is refundable | No |
+| `list_plan_options` | Compare available plans and savings | No |
+| `get_resolution_summary` | Summarize verified fixes and approval scope | No |
+| `get_approval_status` | Read the human's current approval | No |
+| `apply_outage_credit` | Apply one eligible outage credit | **Yes** |
+| `refund_invalid_charge` | Refund one verified invalid charge | **Yes** |
+| `change_plan` | Change only to an exactly approved plan | **Yes** |
+| `get_resolution_receipt` | Read the final case receipt | No |
 
-## Human approval is a hard boundary
+All tool names stay within the recommended WebMCP character budget, descriptions are concise, schemas reject undeclared properties, and read/write annotations are explicit.
 
-The important property is not “the agent should remember to ask.” Advocate stores a scoped approval and checks it again when a sensitive database operation is requested.
+## The seeded challenge scenario
 
-- **Fix bill only** approves eligible billing fixes, not a plan.
-- **Fix bill + switch plan** approves billing fixes plus one exact plan ID.
-- A direct plan choice has its own explicit confirmation and exact-plan approval.
-- `apply_outage_credit` and `refund_invalid_charge` fail without billing approval.
-- `change_plan` fails unless the authenticated customer approved that exact plan.
-- duplicate writes are idempotent and do not duplicate credits/refunds.
+The public demo is intentionally deterministic so every judge can reproduce the same account problem in an isolated account:
 
-## Product navigation
+- current bill: **$94.37**
+- previous bill: **$59.00**
+- promotion expired: **+$25.00**
+- invalid installation fee: **+$10.37**
+- confirmed Aug 22 outage: **6h 42m**
+- eligible outage credit: **$12.80**
+- total immediately recoverable: **$23.17**
+- projected corrected balance: **$71.20**
+- equivalent 500 Mbps plan: **$67/mo**, saving **$17/mo**
 
-### Overview
-Account summary, current bill, service status, active plan, guided resolution center, live account activity, and post-resolution receipt.
+The carrier/billing fixture is seeded; the identity, persistence, authorization, approvals, ledger writes, profile/settings, support requests, and account isolation are production-backed.
 
-### Billing
-Current statement, individual charges/adjustments, statement history, payment preferences, and print-friendly statement output.
+## Human approval is a hard security boundary
 
-### Usage
-Current and prior monthly transfer totals and service speed context.
+The important property is not a prompt telling the agent to ask first. Approval is persisted and checked again at the account mutation boundary.
 
-### Outages
-Confirmed outage history with duration, reason, and credit eligibility workflow.
+- **Fix bill only** authorizes eligible billing corrections and no plan change.
+- **Fix bill + switch plan** authorizes the billing corrections plus one exact plan ID.
+- `apply_outage_credit` and `refund_invalid_charge` reject calls without bill-fix approval.
+- `change_plan` rejects calls unless its `plan_id` exactly matches the persisted human approval.
+- `apply_approved_resolution` is only orchestration; it cannot bypass those lower-level checks.
+- monetary writes are idempotent, so retries do not duplicate credits or refunds.
+- PostgreSQL Row Level Security isolates customer data by authenticated user.
+- browser clients cannot directly write protected account tables; sensitive writes go through scoped database functions.
 
-### Plans
-Current plan plus available alternatives. Changing plans always requires an explicit confirmation.
+Vercel also sends `Origin-Agent-Cluster: ?1` and `Permissions-Policy: tools=(self)` so the production document satisfies WebMCP's origin-isolation and permissions model.
 
-### Support
-Persisted customer support requests with category, subject, message, status, and request history.
+## Product experience beyond the demo
 
-### Profile
-Editable identity/contact/service-address information and timezone.
+Advocate is a complete account portal rather than a WebMCP control panel:
 
-### Settings
-Autopay, paperless billing, notifications, password changes, sign out, and demo-only scenario reset.
+- sign in, sign up, and isolated one-click demo access
+- overview, billing, usage, outages, plans, support, profile, and settings
+- persisted profile/contact/service-address preferences
+- managed password change
+- AutoPay, paperless, and notification preferences
+- support request creation and history
+- statement and receipt printing
+- explicit confirmation dialogs for plan/bill-changing actions
+- responsive desktop/tablet/mobile navigation
+- live account activity and resolution receipts
+- signed-in WebMCP tools bound to the exact account state shown on screen
 
-## Run locally
+## Architecture
 
-Requirements: Node.js 20+.
+```text
+ChatGPT / WebMCP-aware browser agent
+                 │
+                 │ document.modelContext.registerTool
+                 ▼
+        ┌──────────────────────┐
+        │  Advocate web app    │
+        │  normal human UI     │
+        │  + 16 WebMCP tools   │
+        └──────────┬───────────┘
+                   │ authenticated JWT
+                   ▼
+        ┌──────────────────────┐
+        │ Neon Data API / RPC  │
+        └──────────┬───────────┘
+                   ▼
+        ┌──────────────────────┐
+        │ Neon Postgres        │
+        │ RLS + approval rules │
+        │ idempotent ledger    │
+        └──────────────────────┘
+```
+
+The browser never receives database credentials.
+
+## WebMCP evaluation strategy
+
+The repository includes deterministic contract tests for the browser tool surface and a reproducible manual eval matrix in [`docs/WEBMCP_EVALS.md`](docs/WEBMCP_EVALS.md).
+
+The automated WebMCP tests verify:
+
+- all 16 tools are unique and within recommended name/description budgets;
+- JSON Schemas and read/write annotations are present;
+- the intent-level investigation returns the exact evidence and recovery math;
+- the intent-level write is blocked before human approval;
+- bill-only approval cannot cause a plan change;
+- repeated resolution calls remain idempotent.
+
+The broader stress suite creates **750 fresh account states**, probes unauthorized writes, hammers duplicate concurrent mutations, and verifies ledger/balance/plan/receipt invariants.
+
+## Run and verify
+
+Requires Node.js 20+ and no runtime/build dependencies.
 
 ```bash
 npm run dev
-```
-
-Open `http://127.0.0.1:4173`.
-
-The production auth service trusts the deployed Advocate origin. For local UI development, the static app can be inspected locally, while full hosted authentication should be validated on the production origin.
-
-## Test and stress test
-
-No runtime or build dependencies are required.
-
-```bash
 npm test
 npm run test:stress
 npm run build
-# or all three:
+# everything CI runs:
 npm run check
 ```
 
-The suite covers the original billing domain, WebMCP contracts, the authenticated cloud adapter, approval boundaries, idempotent money movement, and deterministic challenge math. The stress suite creates **750 fresh account states**, probes unauthorized writes, hammers duplicate concurrent mutations, and checks ledger/balance/plan/receipt invariants.
-
-Expected bill-only result:
-
-```text
-Previous bill:       $94.37
-Outage credit:      -$12.80
-Invalid fee refund: -$10.37
-New balance:         $71.20
-Plan changed:        No
-```
+Open `http://127.0.0.1:4173` for local static development. Full hosted authentication is validated on the configured production origin.
 
 ## Project structure
 
 ```text
 index.html               Authenticated product shell and account screens
+src/main.js              Session bootstrap + WebMCP registration
+src/webmcp.js            16 browser-native WebMCP tools and safe orchestration
 src/cloud.js             Neon Auth/Data API client + cloud account service
-src/main.js              Session bootstrap, login/signup/demo access, WebMCP router
-src/ui.js                Product navigation, forms, dialogs, account workflows
+src/ui.js                Product navigation, dialogs, account workflows
 src/styles.css           Responsive product design system + print styles
-src/webmcp.js            14 browser-native WebMCP tools
-src/domain.js            Deterministic billing domain used by tests/local model
-src/repository.js        In-memory/IndexedDB repositories for deterministic tests
-src/seed.js              Challenge scenario fixture
-scripts/build.mjs        Production checks + static build
-scripts/serve.mjs        Dependency-free local server
-scripts/stress.mjs       High-volume mutation/invariant stress suite
-tests/                   Domain, WebMCP, and cloud-adapter tests
-vercel.json              Hosting/security headers
+src/judge-polish.js      Agent-status + notification UX
+src/domain.js            Deterministic billing domain for tests
+src/repository.js        In-memory/IndexedDB repositories
+src/seed.js              Reproducible challenge fixture
+scripts/stress.mjs       High-volume authorization/idempotency stress suite
+tests/                   Domain, cloud, product-shell, and WebMCP tests
+docs/WEBMCP_EVALS.md     Manual agent eval matrix and expected outcomes
+vercel.json              Production build and WebMCP/security headers
 ```
-
-## Challenge testing instructions
-
-1. Open https://advocate-live-cinevault7-8566s-projects.vercel.app.
-2. Choose **Explore live demo** to create an isolated authenticated demo account.
-3. Confirm the header reports the WebMCP tool status in a compatible browser.
-4. Use the prompt from “The 15-second WebMCP demo.”
-5. Watch the normal account portal update as tools inspect the bill and outage.
-6. When the resolution appears, approve **Fix bill only**.
-7. Confirm the balance becomes **$71.20** and the persisted receipt appears.
-8. Ask the agent to change the plan anyway; it should fail because no exact plan approval exists.
-9. Use **Settings → Reset demo scenario** to restore that demo account when desired.
 
 ## Real-world integration boundary
 
-Advocate’s identity, persistence, account isolation, profile/preferences, support requests, approval enforcement, and billing ledger are real production-backed product features. The broadband carrier data in this public challenge deployment is intentionally seeded because no live ISP provisioning, payment-processor, or carrier billing API credentials are part of this repository. Connecting those external systems would replace the seed/account-provisioning adapters without changing the product or WebMCP interaction model.
+This public challenge deployment does not claim to be connected to a real ISP provisioning system or payment processor. The broadband carrier data is intentionally seeded. Replacing the seed/account-provisioning adapter with carrier APIs would not change the WebMCP interaction model, authorization design, or human-approval boundary demonstrated here.
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
