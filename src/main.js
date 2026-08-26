@@ -1,11 +1,15 @@
 import { AdvocateAuthClient, DataApiClient, createCloudAdvocateService } from './cloud.js';
 import { registerAdvocateTools, createToolDefinitions } from './webmcp.js';
 import { createUI } from './ui.js';
+import { createJudgeUX, installJudgePolishStyles } from './judge-polish.js';
+
+installJudgePolishStyles();
 
 const $ = (selector) => document.querySelector(selector);
 const auth = new AdvocateAuthClient();
 let activeService = null;
 let ui = null;
+let judgeUX = null;
 let toolsRegistered = false;
 
 const serviceRouter = new Proxy({}, {
@@ -17,6 +21,8 @@ const serviceRouter = new Proxy({}, {
     };
   }
 });
+
+const toolCount = createToolDefinitions(serviceRouter).length;
 
 function authMessage(message = '', kind = 'error') {
   const box = $('#authMessage');
@@ -45,6 +51,8 @@ function setAuthTab(tab) {
 }
 
 function showAuth() {
+  judgeUX?.destroy();
+  judgeUX = null;
   activeService = null;
   ui = null;
   $('#appView').classList.add('hidden');
@@ -55,14 +63,23 @@ function showAuth() {
 }
 
 async function ensureTools() {
-  if (toolsRegistered) return;
+  if (toolsRegistered) {
+    const status = { supported: true, count: toolCount };
+    ui?.setWebMcpStatus(status);
+    judgeUX?.setAgentStatus(status);
+    return status;
+  }
   try {
     const status = await registerAdvocateTools(serviceRouter);
     toolsRegistered = status.supported;
-    ui?.setWebMcpStatus(status);
+    if (status.supported) ui?.setWebMcpStatus(status);
+    judgeUX?.setAgentStatus({ ...status, count: status.count || toolCount });
+    return status;
   } catch (error) {
     console.error('WebMCP registration failed', error);
-    ui?.setWebMcpStatus({ supported: false, count: 0, error: error instanceof Error ? error.message : String(error) });
+    const status = { supported: false, count: toolCount, error: error instanceof Error ? error.message : String(error) };
+    judgeUX?.setAgentStatus(status);
+    return status;
   }
 }
 
@@ -71,7 +88,13 @@ async function startApp(session, { name = null, demo = false } = {}) {
   await api.rpc('ensure_advocate_account', { p_name: name, p_demo: demo });
 
   let nextUI = null;
-  activeService = createCloudAdvocateService(api, { onEvent: (event) => nextUI?.onEvent(event) });
+  let nextJudgeUX = null;
+  activeService = createCloudAdvocateService(api, {
+    onEvent: (event) => {
+      nextUI?.onEvent(event);
+      nextJudgeUX?.refreshNotifications();
+    }
+  });
   nextUI = createUI({
     service: activeService,
     auth,
@@ -84,8 +107,19 @@ async function startApp(session, { name = null, demo = false } = {}) {
   $('#appView').classList.remove('hidden');
   document.title = 'Advocate — Account';
   await ui.init();
-  await ensureTools();
-  if (toolsRegistered) ui.setWebMcpStatus({ supported: true, count: createToolDefinitions(serviceRouter).length });
+
+  judgeUX?.destroy();
+  nextJudgeUX = createJudgeUX({
+    api,
+    navigate: (panel) => ui?.activatePanel(panel),
+    toolCount
+  });
+  judgeUX = nextJudgeUX;
+  await judgeUX.init();
+
+  const status = await ensureTools();
+  if (status.supported) ui.setWebMcpStatus({ supported: true, count: toolCount });
+  judgeUX.setAgentStatus({ supported: status.supported, count: toolCount });
 }
 
 async function resolveSession(preferred = null) {
@@ -168,6 +202,7 @@ Object.defineProperty(window, '__ADVOCATE_TEST__', {
       return tool.execute(input);
     },
     state: () => activeService?.getState(),
+    notifications: () => judgeUX?.refreshNotifications(),
     signedIn: () => Boolean(activeService)
   },
   writable: false,
