@@ -2,6 +2,8 @@
 
 > **Your agent should fix your bill, not open a support ticket.**
 
+**Live demo:** https://advocate-live-cinevault7-8566s-projects.vercel.app
+
 Advocate is a WebMCP-native customer account portal where a customer’s agent can investigate a billing problem, prove what went wrong, show the customer the exact fix, and execute it after approval.
 
 No chatbot. No generic “AI insights” panel. The customer keeps the normal ISP portal they already understand; WebMCP gives their agent a reliable, structured interface to the same account state.
