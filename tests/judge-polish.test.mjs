@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { agentStatusPresentation, normalizeNotificationPayload, relativeNotificationTime } from '../src/judge-polish.js';
 
 test('agent status is confident without falsely claiming unsupported browser connection', () => {
@@ -35,4 +36,12 @@ test('relative notification time is deterministic for judge-visible freshness', 
   assert.equal(relativeNotificationTime('2026-08-26T12:29:20Z', now), 'Just now');
   assert.equal(relativeNotificationTime('2026-08-26T12:00:00Z', now), '30m ago');
   assert.equal(relativeNotificationTime('2026-08-26T09:30:00Z', now), '3h ago');
+});
+
+test('new accounts auto-login immediately after sign-up', async () => {
+  const main = await readFile(new URL('../src/main.js', import.meta.url), 'utf8');
+  assert.match(main, /async function createAccountAndSignIn/);
+  assert.match(main, /await auth\.signUp\(\{ name, email, password \}\);\s*return auth\.signIn\(\{ email, password, rememberMe: true \}\);/s);
+  assert.match(main, /loginFlow\(\(\) => createAccountAndSignIn\(\{ name, email, password, demo: false \}\)/);
+  assert.match(main, /createAccountAndSignIn\(\{ name: 'Jordan Lee', email, password, demo: true \}\)/);
 });
