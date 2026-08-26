@@ -2,244 +2,184 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f7f9fc">
-  <meta name="description" content="Advocate — a WebMCP-native customer account portal for billing, plans, outages, and support.">
-  <title>Advocate — Account</title>
-  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#050608">
+  <meta name="description" content="Advocate — browser-native autonomous enforcement mission control powered by WebMCP.">
+  <title>Advocate · WebMCP Enforcement Mission Control</title>
   <link rel="stylesheet" href="/src/styles.css">
 </head>
 <body>
-  <div id="authView" class="auth-shell">
-    <header class="auth-header">
-      <a class="brand" href="#" aria-label="Advocate home">
+  <div class="ambient ambient-a" aria-hidden="true"></div>
+  <div class="ambient ambient-b" aria-hidden="true"></div>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Advocate home">
         <span class="brand-mark" aria-hidden="true">A</span>
-        <span>Advocate</span>
+        <span>ADVOCATE</span>
       </a>
-      <span class="secure-chip"><span class="status-dot"></span> Secure account access</span>
+      <div class="top-telemetry" aria-label="Live system status">
+        <span class="pulse-dot"></span>
+        <span id="systemStatus">SYSTEM READY</span>
+        <span class="top-divider"></span>
+        <span id="clock">--:--:--</span>
+      </div>
+      <div class="protocol-badge" id="protocolBadge">WEBMCP · PROBING</div>
     </header>
 
-    <main class="auth-main">
-      <section class="auth-story" aria-labelledby="welcomeTitle">
-        <p class="eyebrow">Your account, without the runaround</p>
-        <h1 id="welcomeTitle">Bills, outages, plans, and support in one place.</h1>
-        <p class="auth-lead">Advocate gives you a normal customer portal and a structured interface your browser agent can safely use on your behalf.</p>
-        <div class="benefit-list" aria-label="Product benefits">
-          <div><span class="benefit-icon">✓</span><div><strong>Private by default</strong><small>Your account data is tied to your login and protected by row-level access rules.</small></div></div>
-          <div><span class="benefit-icon">✓</span><div><strong>Human approval stays required</strong><small>Credits, refunds, and plan changes are enforced by the account backend.</small></div></div>
-          <div><span class="benefit-icon">✓</span><div><strong>Persistent account history</strong><small>Profile updates, support requests, billing actions, and receipts survive refreshes.</small></div></div>
+    <main id="top">
+      <section class="hero" aria-labelledby="heroTitle">
+        <div class="hero-copy">
+          <div class="eyebrow"><span>LIVE CASE</span><strong>INV-0427</strong><span class="eyebrow-separator">/</span><span>CONTRACT BREACH</span></div>
+          <h1 id="heroTitle">Enforcement,<br><span>executed.</span></h1>
+          <p class="hero-sub">From signed clause to cryptographic action receipt in one human-authorized run.</p>
+          <button class="execute-button" id="executeFlow" type="button">
+            <span class="execute-orb" aria-hidden="true"></span>
+            <span>Execute Live Enforcement Flow</span>
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11M11 5l5 5-5 5"/></svg>
+          </button>
+          <div class="hero-trust">
+            <span>4 browser tools</span><i></i><span>1 human gate</span><i></i><span>SHA-256 receipts</span>
+          </div>
+        </div>
+
+        <div class="mission-card" aria-label="Execution pipeline">
+          <div class="mission-card-head">
+            <span>EXECUTION GRAPH</span>
+            <span id="runId">IDLE</span>
+          </div>
+          <div class="pipeline" id="pipeline">
+            <article class="stage is-ready" data-stage="1">
+              <div class="stage-index">01</div>
+              <div><strong>CAUSE</strong><span>Contract audit</span></div>
+              <b class="stage-state">READY</b>
+            </article>
+            <div class="stage-link"><span></span></div>
+            <article class="stage" data-stage="2">
+              <div class="stage-index">02</div>
+              <div><strong>ENTITLEMENT</strong><span>Penalty engine</span></div>
+              <b class="stage-state">QUEUED</b>
+            </article>
+            <div class="stage-link"><span></span></div>
+            <article class="stage" data-stage="3">
+              <div class="stage-index">03</div>
+              <div><strong>AUTHORIZE</strong><span>Human approval</span></div>
+              <b class="stage-state">QUEUED</b>
+            </article>
+            <div class="stage-link"><span></span></div>
+            <article class="stage" data-stage="4">
+              <div class="stage-index">04</div>
+              <div><strong>EXECUTE</strong><span>WebMCP agent</span></div>
+              <b class="stage-state">QUEUED</b>
+            </article>
+            <div class="stage-link"><span></span></div>
+            <article class="stage" data-stage="5">
+              <div class="stage-index">05</div>
+              <div><strong>RECEIPT</strong><span>Immutable proof</span></div>
+              <b class="stage-state">QUEUED</b>
+            </article>
+          </div>
         </div>
       </section>
 
-      <section class="auth-card" aria-label="Sign in or create an account">
-        <div class="auth-tabs" role="tablist" aria-label="Account access">
-          <button id="signInTab" class="auth-tab active" type="button" role="tab" aria-selected="true" aria-controls="signInPanel">Sign in</button>
-          <button id="signUpTab" class="auth-tab" type="button" role="tab" aria-selected="false" aria-controls="signUpPanel">Create account</button>
-        </div>
+      <section class="telemetry-strip" aria-label="Real-time telemetry tickers">
+        <div><span>CLAIM VALUE</span><strong id="claimTicker">$0.00</strong></div>
+        <div><span>DELAY</span><strong id="delayTicker">47d</strong></div>
+        <div><span>TOOLS EXPOSED</span><strong id="toolTicker">04</strong></div>
+        <div><span>LAST LATENCY</span><strong id="latencyTicker">— ms</strong></div>
+        <div><span>LEDGER RECORDS</span><strong id="ledgerTicker">00</strong></div>
+      </section>
 
-        <div id="signInPanel" role="tabpanel" aria-labelledby="signInTab">
-          <div class="form-heading"><h2>Welcome back</h2><p>Use your Advocate email and password.</p></div>
-          <form id="signInForm" class="stack-form" novalidate>
-            <label>Email<input id="signInEmail" name="email" type="email" autocomplete="email" inputmode="email" required placeholder="you@example.com"></label>
-            <label>Password<input id="signInPassword" name="password" type="password" autocomplete="current-password" minlength="8" required placeholder="Your password"></label>
-            <label class="check-row"><input id="rememberMe" type="checkbox" checked><span>Keep me signed in</span></label>
-            <button class="button primary wide" type="submit">Sign in</button>
-          </form>
-        </div>
+      <section class="mission-grid">
+        <article class="panel audit-panel">
+          <header class="panel-head">
+            <div><span class="panel-kicker">01 / LIVE INGESTION</span><h2>Contract audit</h2></div>
+            <span class="state-pill" id="auditState">STANDBY</span>
+          </header>
+          <div class="contract-meta"><span>MSA-2026.04</span><span>§ 7.4 Settlement Timing</span><span id="evidenceState">EVIDENCE SEALED</span></div>
+          <div class="diff-window" id="diffWindow">
+            <div class="code-line muted"><span>72</span><code>Approved invoices settle within</code></div>
+            <div class="code-line"><span>73</span><code><mark class="term">15 calendar days</mark> of acceptance.</code></div>
+            <div class="code-line muted"><span>74</span><code>Acceptance timestamp: 2026-06-26</code></div>
+            <div class="code-line breach" id="breachLine"><span>75</span><code><del>PAID +15d</del><ins>UNSETTLED +47d</ins></code></div>
+          </div>
+          <footer class="panel-foot"><span id="auditFoot">Awaiting autonomous audit</span><strong id="breachBadge">NO CALLS YET</strong></footer>
+        </article>
 
-        <div id="signUpPanel" class="hidden" role="tabpanel" aria-labelledby="signUpTab">
-          <div class="form-heading"><h2>Create your Advocate account</h2><p>Your profile and account activity will be private to this login.</p></div>
-          <form id="signUpForm" class="stack-form" novalidate>
-            <label>Full name<input id="signUpName" name="name" type="text" autocomplete="name" minlength="2" required placeholder="Jordan Lee"></label>
-            <label>Email<input id="signUpEmail" name="email" type="email" autocomplete="email" inputmode="email" required placeholder="you@example.com"></label>
-            <label>Password<input id="signUpPassword" name="password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required placeholder="At least 10 characters"></label>
-            <label>Confirm password<input id="signUpConfirm" name="confirm" type="password" autocomplete="new-password" minlength="10" required placeholder="Repeat your password"></label>
-            <button class="button primary wide" type="submit">Create account</button>
-          </form>
-        </div>
+        <article class="panel entitlement-panel">
+          <header class="panel-head">
+            <div><span class="panel-kicker">02 / ENTITLEMENT</span><h2>Claim engine</h2></div>
+            <span class="state-pill" id="entitlementState">STANDBY</span>
+          </header>
+          <div class="amount-block">
+            <span>ENFORCEABLE CLAIM</span>
+            <strong id="claimAmount">$0.00</strong>
+            <em id="claimDelta">principal + statutory interest</em>
+          </div>
+          <div class="calc-ledger">
+            <div><span>Principal</span><strong id="principalAmount">$12,840.00</strong></div>
+            <div><span>Delay</span><strong>47 days</strong></div>
+            <div><span>Statutory component</span><strong id="penaltyAmount">$0.00</strong></div>
+            <div class="calc-total"><span>Citation</span><strong id="citation">Pending calculation</strong></div>
+          </div>
+        </article>
 
-        <div class="auth-divider"><span>or</span></div>
-        <button id="demoAccess" class="button secondary wide" type="button">Explore with an isolated live demo account</button>
-        <p class="auth-footnote">The demo creates a real, private temporary account in the same production backend. No shared credentials.</p>
-        <div id="authMessage" class="form-message hidden" role="status" aria-live="polite"></div>
+        <article class="panel telemetry-panel">
+          <header class="panel-head">
+            <div><span class="panel-kicker">AGENT I/O</span><h2>Agent Telemetry Stream</h2></div>
+            <span class="stream-live"><i></i>LIVE</span>
+          </header>
+          <div class="telemetry-stream" id="telemetryStream" aria-live="polite">
+            <div class="telemetry-empty" id="telemetryEmpty">
+              <span class="scan-line"></span>
+              WebMCP runtime armed. Execute the flow to inspect schema validation, typed payloads, and latency.
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="receipt-card" id="receiptCard" aria-live="polite">
+        <div class="receipt-seal" aria-hidden="true"><span>✓</span></div>
+        <div class="receipt-copy">
+          <span class="panel-kicker">05 / CRYPTOGRAPHIC ACTION RECEIPT</span>
+          <h2>Enforcement action recorded.</h2>
+          <div class="receipt-grid">
+            <div><span>ACTION ID</span><strong id="receiptAction">—</strong></div>
+            <div><span>TIMESTAMP</span><strong id="receiptTimestamp">—</strong></div>
+            <div><span>CLAIM HASH</span><strong id="receiptClaimHash">—</strong></div>
+            <div><span>RECEIPT HASH</span><strong id="receiptHash">—</strong></div>
+            <div><span>STATUTORY CITATION</span><strong id="receiptCitation">—</strong></div>
+            <div><span>LEDGER STATUS</span><strong class="verified">VERIFIED · RECORDED</strong></div>
+          </div>
+        </div>
+        <button class="download-button" id="downloadReceipt" type="button" disabled>
+          <span>Download verified PDF</span>
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 3v9m0 0 4-4m-4 4L6 8M4 16h12"/></svg>
+        </button>
       </section>
     </main>
+
+    <footer class="footer"><span>ADVOCATE / WEBMCP CHALLENGE 2026</span><span>SIMULATED LEGAL WORKFLOW · HUMAN AUTHORIZATION REQUIRED</span></footer>
   </div>
 
-  <div id="appView" class="app-shell hidden">
-    <header class="topbar">
-      <div class="topbar-left">
-        <button id="mobileMenuButton" class="icon-button mobile-only" type="button" aria-label="Open navigation" aria-expanded="false">☰</button>
-        <a class="brand" href="#overview" aria-label="Advocate overview">
-          <span class="brand-mark" aria-hidden="true">A</span>
-          <span>Advocate</span>
-        </a>
+  <div class="modal-backdrop" id="authorizationModal" role="dialog" aria-modal="true" aria-labelledby="authorizationTitle" hidden>
+    <div class="authorization-modal">
+      <div class="modal-icon" aria-hidden="true"><span>⌁</span></div>
+      <span class="modal-kicker">HUMAN-IN-THE-LOOP · IRREVERSIBLE ACTION</span>
+      <h2 id="authorizationTitle">Authorize enforcement?</h2>
+      <p>The agent has verified the breach and calculated the claim. Your single approval permits notice generation and dispute-record filing.</p>
+      <div class="approval-summary">
+        <div><span>CLAIM</span><strong id="modalClaim">—</strong></div>
+        <div><span>CITATION</span><strong id="modalCitation">—</strong></div>
+        <div><span>INTENT HASH</span><strong id="modalIntentHash">—</strong></div>
       </div>
-      <div class="topbar-right">
-        <span id="webMcpStatus" class="webmcp-pill"><span class="status-dot"></span><span>Checking browser tools…</span></span>
-        <div class="profile-menu-wrap">
-          <button id="profileMenuButton" class="profile-button" type="button" aria-expanded="false" aria-haspopup="menu">
-            <span id="headerAvatar" class="avatar">JL</span>
-            <span class="profile-button-copy"><strong id="headerName">Account</strong><small id="headerAccount">Loading…</small></span>
-            <span aria-hidden="true">⌄</span>
-          </button>
-          <div id="profileMenu" class="profile-menu hidden" role="menu">
-            <button type="button" role="menuitem" data-go="profile">Profile</button>
-            <button type="button" role="menuitem" data-go="settings">Settings</button>
-            <button id="menuSignOut" type="button" role="menuitem">Sign out</button>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <div class="app-body">
-      <aside id="sidebar" class="sidebar" aria-label="Account navigation">
-        <nav class="nav-list">
-          <a class="nav-item active" href="#overview" data-panel="overview"><span aria-hidden="true">⌂</span><span>Overview</span></a>
-          <a class="nav-item" href="#billing" data-panel="billing"><span aria-hidden="true">▤</span><span>Billing</span></a>
-          <a class="nav-item" href="#usage" data-panel="usage"><span aria-hidden="true">◒</span><span>Usage</span></a>
-          <a class="nav-item" href="#outages" data-panel="outages"><span aria-hidden="true">△</span><span>Outages</span></a>
-          <a class="nav-item" href="#plans" data-panel="plans"><span aria-hidden="true">⇄</span><span>Plans</span></a>
-          <a class="nav-item" href="#support" data-panel="support"><span aria-hidden="true">?</span><span>Support</span></a>
-          <div class="nav-separator"></div>
-          <a class="nav-item" href="#profile" data-panel="profile"><span aria-hidden="true">○</span><span>Profile</span></a>
-          <a class="nav-item" href="#settings" data-panel="settings"><span aria-hidden="true">⚙</span><span>Settings</span></a>
-        </nav>
-        <div class="sidebar-account-card">
-          <small>Account</small>
-          <strong id="sidebarAccountNumber">—</strong>
-          <span id="sidebarServiceAddress">Loading service address…</span>
-          <span id="sidebarAccountStatus" class="mini-status">Good standing</span>
-        </div>
-      </aside>
-
-      <main id="mainContent" class="content" tabindex="-1">
-        <section id="overview" class="page-section active" aria-labelledby="overviewTitle">
-          <div class="page-heading">
-            <div><p class="eyebrow">Home internet</p><h1 id="overviewTitle">Good afternoon</h1><p id="overviewSubhead">Loading your account…</p></div>
-            <span id="accountState" class="account-state">Good standing</span>
-          </div>
-
-          <div class="overview-grid">
-            <button class="card action-card" type="button" data-go="billing" aria-label="Open billing">
-              <span class="card-kicker">Current bill</span>
-              <span class="amount-row"><strong id="currentAmount" class="amount">$0.00</strong><span id="billDelta" class="delta up">—</span></span>
-              <span>Previous month <b id="previousAmount">$0.00</b></span>
-              <span class="card-bottom"><span id="billDueText">Due —</span><span>View bill →</span></span>
-            </button>
-            <button class="card action-card" type="button" data-go="outages" aria-label="Open outage history">
-              <span class="card-kicker">Service history</span>
-              <span class="card-title-row"><strong id="outageHeadline">No recent outages</strong><span class="warning-badge">Resolved</span></span>
-              <span id="outageSummary">Your reliability history is available here.</span>
-              <span class="card-bottom"><span>Reliability</span><span>View history →</span></span>
-            </button>
-            <button class="card action-card" type="button" data-go="plans" aria-label="Open plan options">
-              <span class="card-kicker">Current plan</span>
-              <span class="plan-line"><span><strong id="currentPlanName">—</strong><small id="currentPlanSpeed">—</small></span><strong id="currentPlanPrice">—</strong></span>
-              <span id="promoMessage" class="info-strip">Plan details are loading.</span>
-              <span class="card-bottom"><span>Manage plan</span><span>Compare plans →</span></span>
-            </button>
-          </div>
-
-          <section id="resolutionCenter" class="resolution-center" aria-live="polite">
-            <div class="section-heading"><div><p class="eyebrow">Resolution center</p><h2>Account review</h2></div><span id="caseStatus" class="case-status">No active review</span></div>
-            <div id="idleResolution" class="empty-resolution">
-              <div class="shield-icon" aria-hidden="true">✓</div>
-              <div><h3>Your account is ready</h3><p>Ask your browser agent to investigate a bill or outage. Verified findings and approvals will appear here as the agent works.</p></div>
-              <button id="runGuidedReview" class="button secondary" type="button">Run guided review</button>
-            </div>
-            <div id="investigationView" class="investigation hidden">
-              <div class="investigation-layout">
-                <div><h3>What changed</h3><div id="comparisonRows" class="finding-list"></div></div>
-                <div><h3>Verified entitlements</h3><div id="entitlementRows" class="finding-list"></div></div>
-              </div>
-            </div>
-            <article id="fixCard" class="fix-card hidden">
-              <div class="fix-card-head"><div><span class="success-kicker">Verified</span><h3>We found <span id="fixCount">0</span> fixes</h3></div><div class="recovery-total"><span>Total recovery</span><strong id="recoveryTotal">$0.00</strong></div></div>
-              <div id="fixRows" class="fix-rows"></div>
-              <div id="planOpportunity" class="plan-opportunity hidden"><div><span>Your promotional price ended.</span><div class="plan-compare"><div><small>Current plan</small><strong id="resolutionCurrentPlan">—</strong></div><span aria-hidden="true">→</span><div><small>Equivalent plan</small><strong id="resolutionAltPlan">—</strong></div></div></div><span id="resolutionSavings" class="save-badge">Save</span></div>
-              <div id="approvalActions" class="approval-actions"><button id="approveBillOnly" class="button secondary" type="button">Fix bill only</button><button id="approveBillAndPlan" class="button primary" type="button">Fix bill + switch plan</button></div>
-              <div id="approvalNotice" class="approval-notice hidden" role="status"></div>
-            </article>
-            <article id="receiptCard" class="receipt-card hidden">
-              <div class="receipt-head"><div class="receipt-check" aria-hidden="true">✓</div><div><span class="success-kicker">Resolved</span><h3>Resolution receipt</h3></div><button id="printReceipt" class="button tertiary" type="button">Print receipt</button></div>
-              <dl id="receiptRows" class="receipt-grid"></dl>
-              <div class="receipt-foot"><span id="receiptCase"></span><span id="receiptTime"></span></div>
-            </article>
-          </section>
-
-          <section class="activity-section">
-            <div class="section-heading compact"><div><p class="eyebrow">Account activity</p><h2>Recent actions</h2></div><span id="activityCount" class="activity-count">0 actions</span></div>
-            <ol id="activityLog" class="activity-log"><li class="activity-empty">No activity yet.</li></ol>
-          </section>
-        </section>
-
-        <section id="billing" class="page-section" aria-labelledby="billingTitle">
-          <div class="page-heading"><div><p class="eyebrow">Billing</p><h1 id="billingTitle">Billing & statements</h1><p>See charges, adjustments, and statement history.</p></div><div class="heading-actions"><button id="printStatement" class="button secondary" type="button">Print statement</button><button class="button tertiary" type="button" data-go="settings">Billing settings</button></div></div>
-          <div class="billing-layout">
-            <article class="card statement-card"><div class="statement-summary"><div><span>Amount due</span><small id="statementDueDate">Due —</small></div><strong id="statementDue">$0.00</strong></div><div id="chargeRows" class="statement-lines"></div><div class="statement-total"><span>Total</span><strong id="statementTotal">$0.00</strong></div></article>
-            <aside class="card billing-side-card"><h2>Payment preferences</h2><div class="preference-row"><span>AutoPay</span><strong id="billingAutopay">—</strong></div><div class="preference-row"><span>Paperless billing</span><strong id="billingPaperless">—</strong></div><button class="button secondary wide" type="button" data-go="settings">Manage preferences</button></aside>
-          </div>
-          <section class="section-block"><div class="section-heading compact"><div><p class="eyebrow">History</p><h2>Statements</h2></div></div><div id="statementHistory" class="list-stack"></div></section>
-        </section>
-
-        <section id="usage" class="page-section" aria-labelledby="usageTitle">
-          <div class="page-heading"><div><p class="eyebrow">Usage</p><h1 id="usageTitle">Internet usage</h1><p>Month-by-month usage and peak speed.</p></div></div>
-          <div id="usageCards" class="metric-grid"></div>
-          <article class="card chart-card"><div class="section-heading compact"><div><h2>Recent usage</h2><p>Download + upload data</p></div></div><div id="usageBars" class="usage-bars"></div></article>
-        </section>
-
-        <section id="outages" class="page-section" aria-labelledby="outagesTitle">
-          <div class="page-heading"><div><p class="eyebrow">Reliability</p><h1 id="outagesTitle">Outage history</h1><p id="outageAddress">Service events for your address.</p></div></div>
-          <div id="outageHistory" class="list-stack"></div>
-          <article class="card policy-card"><div><span class="card-kicker">Reliability policy</span><h2>Confirmed outages can qualify for automatic credits</h2><p>Advocate exposes outage events and eligibility as structured account capabilities, while any actual credit still requires your approval.</p></div><button id="reviewOutageCredit" class="button secondary" type="button">Review my eligibility</button></article>
-        </section>
-
-        <section id="plans" class="page-section" aria-labelledby="plansTitle">
-          <div class="page-heading"><div><p class="eyebrow">Plans</p><h1 id="plansTitle">Plans for your address</h1><p>Compare speed, price, and contract terms.</p></div></div>
-          <div id="planGrid" class="plan-grid"></div>
-        </section>
-
-        <section id="support" class="page-section" aria-labelledby="supportTitle">
-          <div class="page-heading"><div><p class="eyebrow">Support</p><h1 id="supportTitle">Get help</h1><p>Open a support request or let your browser agent resolve supported account issues directly.</p></div></div>
-          <div class="support-layout">
-            <article class="card form-card"><h2>Open a support request</h2><form id="supportForm" class="stack-form" novalidate><label>Category<select id="supportCategory"><option>Billing</option><option>Service</option><option>Plan</option><option>Account</option><option>Other</option></select></label><label>Subject<input id="supportSubject" type="text" minlength="3" maxlength="120" required placeholder="What can we help with?"></label><label>Details<textarea id="supportMessage" minlength="10" maxlength="4000" required rows="6" placeholder="Tell us what happened and what you need."></textarea></label><button class="button primary" type="submit">Submit request</button></form></article>
-            <article class="card"><div class="section-heading compact"><div><h2>Your requests</h2><p>Saved to your account</p></div></div><div id="ticketList" class="list-stack compact-list"></div></article>
-          </div>
-        </section>
-
-        <section id="profile" class="page-section" aria-labelledby="profileTitle">
-          <div class="page-heading"><div><p class="eyebrow">Profile</p><h1 id="profileTitle">Your profile</h1><p>Keep your contact and service details up to date.</p></div></div>
-          <div class="profile-layout">
-            <article class="card profile-summary-card"><span id="profileAvatar" class="avatar avatar-xl">JL</span><h2 id="profileDisplayName">—</h2><p id="profileEmail">—</p><div class="profile-meta"><div><span>Account</span><strong id="profileAccountNumber">—</strong></div><div><span>Status</span><strong>Good standing</strong></div></div></article>
-            <article class="card form-card"><form id="profileForm" class="stack-form two-column" novalidate><label class="span-2">Full name<input id="profileName" type="text" minlength="2" required></label><label>Email<input id="profileEmailInput" type="email" disabled><small>Email is managed by your login.</small></label><label>Phone<input id="profilePhone" type="tel" autocomplete="tel" placeholder="Optional"></label><label class="span-2">Service address<input id="serviceAddress" type="text" autocomplete="street-address" required></label><label>City<input id="serviceCity" type="text" autocomplete="address-level2" required></label><label>State<input id="serviceState" type="text" maxlength="2" autocomplete="address-level1" required></label><label>Postal code<input id="servicePostal" type="text" autocomplete="postal-code" required></label><label>Timezone<select id="profileTimezone"><option value="America/Los_Angeles">Pacific Time</option><option value="America/Denver">Mountain Time</option><option value="America/Chicago">Central Time</option><option value="America/New_York">Eastern Time</option><option value="UTC">UTC</option></select></label><div class="span-2 form-actions"><button class="button primary" type="submit">Save profile</button></div></form></article>
-          </div>
-        </section>
-
-        <section id="settings" class="page-section" aria-labelledby="settingsTitle">
-          <div class="page-heading"><div><p class="eyebrow">Settings</p><h1 id="settingsTitle">Account settings</h1><p>Billing preferences, notifications, and password security.</p></div></div>
-          <div class="settings-grid">
-            <article class="card settings-card"><h2>Billing preferences</h2><label class="switch-row"><span><strong>AutoPay</strong><small>Automatically pay the amount due.</small></span><input id="autopayToggle" type="checkbox" role="switch"></label><label class="switch-row"><span><strong>Paperless billing</strong><small>Receive statements digitally.</small></span><input id="paperlessToggle" type="checkbox" role="switch"></label><button id="saveBillingSettings" class="button secondary" type="button">Save billing preferences</button></article>
-            <article class="card settings-card"><h2>Notifications</h2><label class="switch-row"><span><strong>Billing alerts</strong><small>Balance, due-date, and adjustment updates.</small></span><input id="billingAlertsToggle" type="checkbox" role="switch"></label><label class="switch-row"><span><strong>Service updates</strong><small>Outage and restoration notifications.</small></span><input id="serviceUpdatesToggle" type="checkbox" role="switch"></label><button id="saveNotificationSettings" class="button secondary" type="button">Save notifications</button></article>
-            <article class="card settings-card"><h2>Password</h2><form id="passwordForm" class="stack-form" novalidate><label>Current password<input id="currentPassword" type="password" autocomplete="current-password" required></label><label>New password<input id="newPassword" type="password" autocomplete="new-password" minlength="10" maxlength="128" required></label><label>Confirm new password<input id="confirmNewPassword" type="password" autocomplete="new-password" minlength="10" required></label><button class="button secondary" type="submit">Change password</button></form></article>
-            <article class="card settings-card danger-card"><h2>Session</h2><p>Sign out of this browser. You can sign back in at any time.</p><button id="settingsSignOut" class="button danger" type="button">Sign out</button><button id="resetDemo" class="button tertiary hidden" type="button">Reset demo billing scenario</button></article>
-          </div>
-        </section>
-      </main>
+      <button class="authorize-button" id="authorizeAction" type="button">
+        <span class="fingerprint" aria-hidden="true">◎</span>
+        <span><strong>Authorize & Execute</strong><small>Generate SHA-256 approval proof</small></span>
+      </button>
+      <button class="cancel-button" id="cancelAuthorization" type="button">Cancel run</button>
     </div>
   </div>
 
-  <dialog id="confirmDialog" class="dialog-card">
-    <form method="dialog">
-      <div class="dialog-icon" aria-hidden="true">!</div>
-      <h2 id="dialogTitle">Confirm change</h2>
-      <p id="dialogMessage">Review this change before continuing.</p>
-      <div id="dialogDetails" class="dialog-details"></div>
-      <div class="dialog-actions"><button id="dialogCancel" class="button secondary" value="cancel">Cancel</button><button id="dialogConfirm" class="button primary" value="confirm">Confirm</button></div>
-    </form>
-  </dialog>
-
-  <div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="true"></div>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

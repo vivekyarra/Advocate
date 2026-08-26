@@ -1,266 +1,251 @@
-const emptySchema = { type: 'object', properties: {}, additionalProperties: false };
-const readOnlyAnnotations = { readOnlyHint: true, untrustedContentHint: false };
-const writeAnnotations = { readOnlyHint: false, untrustedContentHint: false };
+const READ_ONLY = Object.freeze({ readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false });
+const WRITE = Object.freeze({ readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false });
 
-function stringify(result) {
-  return JSON.stringify(result);
+const CONTRACT_CLAUSES = Object.freeze({
+  payment_terms_7_4: Object.freeze({
+    clause_id: 'payment_terms_7_4',
+    heading: '§ 7.4 Settlement Timing',
+    contract_version: 'MSA-2026.04',
+    expected: 'Approved invoices settle within 15 calendar days of acceptance.',
+    observed: 'Invoice INV-0427 remains unsettled 47 calendar days after acceptance.',
+    breach_term: '15 calendar days',
+    source: 'Master Services Agreement · signed 2026-04-02',
+    evidence_ref: 'sha256:contract:7.4:INV-0427'
+  })
+});
+
+const RULES = Object.freeze({
+  CA: Object.freeze({ label: 'California', annualRate: 0.10, citation: 'Cal. Civ. Code § 3289(b)', rule: '10% annual post-breach interest when a contract does not stipulate a legal rate.' }),
+  NY: Object.freeze({ label: 'New York', annualRate: 0.09, citation: 'N.Y. C.P.L.R. § 5004', rule: '9% annual statutory interest.' }),
+  TX: Object.freeze({ label: 'Texas', annualRate: 0.085, citation: 'Tex. Fin. Code § 304.003', rule: 'Demo rate used for this simulated claim; verify the current published rate before production filing.' })
+});
+
+function nowMs() {
+  return typeof performance !== 'undefined' && typeof performance.now === 'function' ? performance.now() : Date.now();
 }
 
-function chargeCandidates(comparison = {}) {
-  return (comparison.changes || []).filter((change) => change?.id && change.id !== 'promo_expired');
+export async function sha256(value) {
+  const bytes = new TextEncoder().encode(typeof value === 'string' ? value : JSON.stringify(value));
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-async function investigateBillIssue(service) {
-  const currentBill = await service.getCurrentBill();
-  const previousBills = await service.getPreviousBills();
-  const comparison = await service.compareBills();
-  const outages = await service.getOutageHistory();
-
-  const outageCredits = [];
-  for (const outage of outages) {
-    if (!outage.confirmed) continue;
-    const eligibility = await service.checkCreditEligibility({ outage_id: outage.outage_id });
-    if (eligibility.eligible) outageCredits.push(eligibility);
-  }
-
-  const invalidCharges = [];
-  for (const candidate of chargeCandidates(comparison)) {
-    const validity = await service.checkChargeValidity({ charge_id: candidate.id });
-    if (validity.refundable) invalidCharges.push(validity);
-  }
-
-  await service.listPlanOptions();
-  const summary = await service.getResolutionSummary();
-
-  return {
-    current_bill: {
-      amount_due_cents: currentBill.amount_due_cents,
-      amount_due: currentBill.amount_due,
-      due_on: currentBill.due_on,
-      plan: currentBill.plan
-    },
-    previous_bill: previousBills[0] || null,
-    bill_changes: comparison.changes || [],
-    eligible_outage_credits: outageCredits.map((item) => ({
-      outage_id: item.outage_id,
-      credit_cents: item.credit_cents,
-      credit: item.credit,
-      policy: item.policy
-    })),
-    invalid_charges: invalidCharges.map((item) => ({
-      charge_id: item.charge_id,
-      refund_cents: item.refund_cents,
-      refund: item.refund,
-      reason: item.reason
-    })),
-    total_recovery_cents: summary.total_recovery_cents,
-    total_recovery: summary.total_recovery,
-    projected_balance_after_fixes_cents: summary.projected_balance_after_fixes_cents,
-    plan_opportunity: summary.plan_opportunity,
-    human_approval: summary.human_approval,
-    next_step: 'Present these verified findings to the customer and wait for their resolution choice in the page before applying any account-changing action.'
-  };
+function typeMatches(value, type) {
+  if (type === 'array') return Array.isArray(value);
+  if (type === 'integer') return Number.isInteger(value);
+  if (type === 'number') return typeof value === 'number' && Number.isFinite(value);
+  if (type === 'object') return value !== null && typeof value === 'object' && !Array.isArray(value);
+  return typeof value === type;
 }
 
-async function applyApprovedResolution(service) {
-  const approval = await service.getApprovalStatus();
-  if (!approval.bill_fixes_approved) {
-    throw new Error('Human approval required. Ask the customer to review the verified resolution in the page and choose a resolution option before applying account changes.');
+export function validateInput(schema, input) {
+  const errors = [];
+  const value = input ?? {};
+  if (schema.type && !typeMatches(value, schema.type)) return { valid: false, errors: [`input must be ${schema.type}`] };
+  const properties = schema.properties || {};
+  for (const key of schema.required || []) {
+    if (!(key in value)) errors.push(`${key} is required`);
   }
-
-  const actions = { outage_credits: [], refunds: [], plan_change: null };
-  const outages = await service.getOutageHistory();
-  for (const outage of outages) {
-    if (!outage.confirmed) continue;
-    const eligibility = await service.checkCreditEligibility({ outage_id: outage.outage_id });
-    if (!eligibility.eligible) continue;
-    actions.outage_credits.push(await service.applyOutageCredit({ outage_id: outage.outage_id }));
+  if (schema.additionalProperties === false) {
+    for (const key of Object.keys(value)) if (!(key in properties)) errors.push(`${key} is not allowed`);
   }
-
-  const comparison = await service.compareBills();
-  for (const candidate of chargeCandidates(comparison)) {
-    const validity = await service.checkChargeValidity({ charge_id: candidate.id });
-    if (!validity.refundable) continue;
-    actions.refunds.push(await service.refundInvalidCharge({ charge_id: candidate.id }));
+  for (const [key, childSchema] of Object.entries(properties)) {
+    if (!(key in value)) continue;
+    const child = value[key];
+    if (childSchema.type && !typeMatches(child, childSchema.type)) errors.push(`${key} must be ${childSchema.type}`);
+    if (childSchema.enum && !childSchema.enum.includes(child)) errors.push(`${key} must be one of ${childSchema.enum.join(', ')}`);
+    if (typeof child === 'number' && typeof childSchema.minimum === 'number' && child < childSchema.minimum) errors.push(`${key} must be >= ${childSchema.minimum}`);
+    if (typeof child === 'string' && typeof childSchema.minLength === 'number' && child.length < childSchema.minLength) errors.push(`${key} is too short`);
   }
-
-  if (approval.approved_plan_id) {
-    actions.plan_change = await service.changePlan({ plan_id: approval.approved_plan_id });
-  }
-
-  const receipt = await service.getResolutionReceipt();
-  return {
-    applied: true,
-    billing_changes: actions.outage_credits.length + actions.refunds.length,
-    plan_change_requested: Boolean(approval.approved_plan_id),
-    plan_changed: Boolean(actions.plan_change?.changed),
-    receipt
-  };
+  return { valid: errors.length === 0, errors };
 }
 
-export function createToolDefinitions(service) {
+function telemetry(detail, sink) {
+  sink?.(detail);
+  if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('advocate:webmcp-telemetry', { detail }));
+  }
+}
+
+function inputSchema(properties, required) {
+  return { type: 'object', properties, required, additionalProperties: false };
+}
+
+export function createToolDefinitions(state = {}) {
+  const runtimeState = state;
+  runtimeState.notices ||= new Map();
+  runtimeState.receipts ||= new Map();
+
   return [
     {
-      name: 'investigate_bill_issue',
-      title: 'Investigate bill issue',
-      description: 'Investigate an unusually high bill or outage end-to-end: compare statements, verify outage credits, validate suspicious charges, and identify an equivalent lower-cost plan. Read-only. Use this first for billing complaints, then ask the customer to approve a resolution in the page.',
-      inputSchema: emptySchema,
-      annotations: readOnlyAnnotations,
-      execute: async () => stringify(await investigateBillIssue(service))
+      name: 'fetch_contract_clause',
+      title: 'Fetch contract clause',
+      description: 'Fetch a signed contract clause by stable clause ID for an autonomous breach audit. Returns the expected term, observed condition, and evidence reference.',
+      inputSchema: inputSchema({ clause_id: { type: 'string', minLength: 1, description: 'Stable clause identifier, for example payment_terms_7_4.' } }, ['clause_id']),
+      annotations: READ_ONLY,
+      execute: async ({ clause_id }) => {
+        const clause = CONTRACT_CLAUSES[clause_id];
+        if (!clause) throw new Error(`Unknown clause_id: ${clause_id}`);
+        return { ok: true, clause };
+      }
     },
     {
-      name: 'get_current_bill',
-      title: 'Get current bill',
-      description: 'Read the customer’s current bill, amount due, due date, status, and active plan.',
-      inputSchema: emptySchema,
-      annotations: readOnlyAnnotations,
-      execute: async () => stringify(await service.getCurrentBill())
+      name: 'compute_statutory_penalty',
+      title: 'Compute statutory penalty',
+      description: 'Compute the simulated statutory interest component for a delayed contractual payment using a jurisdiction-specific rule and return the citation used.',
+      inputSchema: inputSchema({
+        jurisdiction: { type: 'string', enum: ['CA', 'NY', 'TX'], description: 'Two-letter jurisdiction code supported by the demo rulebook.' },
+        delay_days: { type: 'integer', minimum: 0, description: 'Calendar days after the contractual settlement deadline.' },
+        base_amount: { type: 'number', minimum: 0, description: 'Unpaid contractual principal in USD.' }
+      }, ['jurisdiction', 'delay_days', 'base_amount']),
+      annotations: READ_ONLY,
+      execute: async ({ jurisdiction, delay_days, base_amount }) => {
+        const rule = RULES[jurisdiction];
+        const penalty = Math.round((base_amount * rule.annualRate * delay_days / 365) * 100) / 100;
+        const claimTotal = Math.round((base_amount + penalty) * 100) / 100;
+        return {
+          ok: true,
+          jurisdiction: rule.label,
+          delay_days,
+          base_amount,
+          annual_rate: rule.annualRate,
+          statutory_penalty: penalty,
+          claim_total: claimTotal,
+          statutory_citation: rule.citation,
+          rule: rule.rule,
+          simulation_notice: 'Demonstration calculation only; production legal use requires jurisdiction-specific verification.'
+        };
+      }
     },
     {
-      name: 'get_previous_bills',
-      title: 'Get previous bills',
-      description: 'Read previous billing statements so the agent can compare the current bill with recent history.',
-      inputSchema: emptySchema,
-      annotations: readOnlyAnnotations,
-      execute: async () => stringify(await service.getPreviousBills())
+      name: 'generate_enforceable_demand_notice',
+      title: 'Generate demand notice',
+      description: 'Generate a structured demand notice from an already-calculated claim payload after human authorization. The result is hashed and staged for filing.',
+      inputSchema: inputSchema({
+        claim_payload: {
+          type: 'object',
+          description: 'Verified claim payload containing claimant, counterparty, principal, penalty, total, citation, breach clause, and authorization proof.'
+        }
+      }, ['claim_payload']),
+      annotations: WRITE,
+      execute: async ({ claim_payload }) => {
+        if (!claim_payload.authorization_proof) throw new Error('authorization_proof is required before notice generation');
+        const actionId = `ACT-${String(runtimeState.notices.size + 1).padStart(4, '0')}-${Date.now().toString(36).toUpperCase()}`;
+        const issuedAt = new Date().toISOString();
+        const claimHash = await sha256({ ...claim_payload, authorization_proof: undefined });
+        const notice = Object.freeze({
+          action_id: actionId,
+          issued_at: issuedAt,
+          claimant: claim_payload.claimant,
+          counterparty: claim_payload.counterparty,
+          demand_amount: claim_payload.claim_total,
+          currency: 'USD',
+          breach_clause: claim_payload.breach_clause,
+          statutory_citation: claim_payload.statutory_citation,
+          claim_hash: claimHash,
+          authorization_proof: claim_payload.authorization_proof,
+          demand: `Pay $${Number(claim_payload.claim_total).toFixed(2)} within 10 calendar days or dispute this claim through the recorded channel.`,
+          status: 'AUTHORIZED_FOR_FILING'
+        });
+        runtimeState.notices.set(actionId, notice);
+        return { ok: true, notice };
+      }
     },
     {
-      name: 'compare_bills',
-      title: 'Compare bills',
-      description: 'Compare the current and previous bill and return the exact line-item changes that explain the difference.',
-      inputSchema: emptySchema,
-      annotations: readOnlyAnnotations,
-      execute: async () => stringify(await service.compareBills())
-    },
-    {
-      name: 'get_outage_history',
-      title: 'Get outage history',
-      description: 'Read confirmed service outages for this account, including duration and event identifiers used for eligibility checks.',
-      inputSchema: emptySchema,
-      annotations: readOnlyAnnotations,
-      execute: async () => stringify(await service.getOutageHistory())
-    },
-    {
-      name: 'explain_charge',
-      title: 'Explain a charge',
-      description: 'Explain one charge on the current bill by charge ID, including its amount and charge category.',
-      inputSchema: {
-        type: 'object',
-        properties: { charge_id: { type: 'string', description: 'Charge ID returned by bill comparison or the current statement.' } },
-        required: ['charge_id'], additionalProperties: false
-      },
-      annotations: readOnlyAnnotations,
-      execute: async (input) => stringify(await service.explainCharge(input))
-    },
-    {
-      name: 'check_credit_eligibility',
-      title: 'Check outage credit',
-      description: 'Check whether a confirmed outage qualifies for a service credit and return the exact eligible amount and policy.',
-      inputSchema: {
-        type: 'object',
-        properties: { outage_id: { type: 'string', description: 'Outage ID returned by get_outage_history.' } },
-        required: ['outage_id'], additionalProperties: false
-      },
-      annotations: readOnlyAnnotations,
-      execute: async (input) => stringify(await service.checkCreditEligibility(input))
-    },
-    {
-      name: 'check_charge_validity',
-      title: 'Validate a charge',
-      description: 'Validate whether a charge matches account activity and return whether it is refundable, with the exact refund amount.',
-      inputSchema: {
-        type: 'object',
-        properties: { charge_id: { type: 'string', description: 'Charge ID returned by compare_bills or the current statement.' } },
-        required: ['charge_id'], additionalProperties: false
-      },
-      annotations: readOnlyAnnotations,
-      execute: async (input) => stringify(await service.checkChargeValidity(input))
-    },
-    {
-      name: 'list_plan_options',
-      title: 'List plan options',
-      description: 'List the current plan and available alternatives, including equivalent-speed options and monthly savings. Does not change the plan.',
-      inputSchema: emptySchema,
-      annotations: readOnlyAnnotations,
-      execute: async () => stringify(await service.listPlanOptions())
-    },
-    {
-      name: 'get_resolution_summary',
-      title: 'Get resolution summary',
-      description: 'Summarize verified fixes, recovery amount, projected balance, plan opportunity, and current human approval scope.',
-      inputSchema: emptySchema,
-      annotations: readOnlyAnnotations,
-      execute: async () => stringify(await service.getResolutionSummary())
-    },
-    {
-      name: 'get_approval_status',
-      title: 'Get approval status',
-      description: 'Read which billing fixes and plan change, if any, the customer has explicitly approved in the page.',
-      inputSchema: emptySchema,
-      annotations: readOnlyAnnotations,
-      execute: async () => stringify(await service.getApprovalStatus())
-    },
-    {
-      name: 'apply_approved_resolution',
-      title: 'Apply approved resolution',
-      description: 'Apply only the resolution the customer already approved in the page: eligible outage credits, invalid-charge refunds, and an exactly approved plan change if present. Backend controls re-check approval and idempotency. Never use before the customer approves.',
-      inputSchema: emptySchema,
-      annotations: writeAnnotations,
-      execute: async () => stringify(await applyApprovedResolution(service))
-    },
-    {
-      name: 'apply_outage_credit',
-      title: 'Apply outage credit',
-      description: 'Apply an eligible outage service credit to the actual account ledger. Fails unless the customer approved billing fixes in the page.',
-      inputSchema: {
-        type: 'object',
-        properties: { outage_id: { type: 'string', description: 'Eligible outage ID returned by check_credit_eligibility.' } },
-        required: ['outage_id'], additionalProperties: false
-      },
-      annotations: writeAnnotations,
-      execute: async (input) => stringify(await service.applyOutageCredit(input))
-    },
-    {
-      name: 'refund_invalid_charge',
-      title: 'Refund invalid charge',
-      description: 'Refund a verified invalid charge to the actual account ledger. Fails unless the customer approved billing fixes in the page.',
-      inputSchema: {
-        type: 'object',
-        properties: { charge_id: { type: 'string', description: 'Refundable charge ID returned by check_charge_validity.' } },
-        required: ['charge_id'], additionalProperties: false
-      },
-      annotations: writeAnnotations,
-      execute: async (input) => stringify(await service.refundInvalidCharge(input))
-    },
-    {
-      name: 'change_plan',
-      title: 'Change plan',
-      description: 'Change the customer’s plan. Fails unless the human explicitly approved this exact plan ID in the page; bill-fix approval alone is insufficient.',
-      inputSchema: {
-        type: 'object',
-        properties: { plan_id: { type: 'string', description: 'Exact plan ID returned by list_plan_options.' } },
-        required: ['plan_id'], additionalProperties: false
-      },
-      annotations: writeAnnotations,
-      execute: async (input) => stringify(await service.changePlan(input))
-    },
-    {
-      name: 'get_resolution_receipt',
-      title: 'Get resolution receipt',
-      description: 'Read the final case receipt with original bill, applied credit, refund, new balance, plan-change status, and resolution time.',
-      inputSchema: emptySchema,
-      annotations: readOnlyAnnotations,
-      execute: async () => stringify(await service.getResolutionReceipt())
+      name: 'file_dispute_record',
+      title: 'File dispute record',
+      description: 'Commit an authorized demand action to the in-browser immutable demo ledger using the action ID and cryptographic human-approval proof hash.',
+      inputSchema: inputSchema({
+        action_id: { type: 'string', minLength: 1, description: 'Action ID returned by generate_enforceable_demand_notice.' },
+        proof_hash: { type: 'string', minLength: 32, description: 'SHA-256 proof of the one-click human authorization payload.' }
+      }, ['action_id', 'proof_hash']),
+      annotations: WRITE,
+      execute: async ({ action_id, proof_hash }) => {
+        if (runtimeState.receipts.has(action_id)) return { ok: true, replayed: true, receipt: runtimeState.receipts.get(action_id) };
+        const notice = runtimeState.notices.get(action_id);
+        if (!notice) throw new Error(`Unknown action_id: ${action_id}`);
+        if (notice.authorization_proof !== proof_hash) throw new Error('proof_hash does not match the authorized notice');
+        const filedAt = new Date().toISOString();
+        const receiptBody = {
+          action_id,
+          filed_at: filedAt,
+          status: 'RECORDED',
+          claim_hash: notice.claim_hash,
+          proof_hash,
+          statutory_citation: notice.statutory_citation,
+          ledger_sequence: runtimeState.receipts.size + 1
+        };
+        const receipt = Object.freeze({ ...receiptBody, receipt_hash: await sha256(receiptBody) });
+        runtimeState.receipts.set(action_id, receipt);
+        return { ok: true, replayed: false, receipt };
+      }
     }
   ];
 }
 
-export async function registerAdvocateTools(service) {
-  if (!document.modelContext?.registerTool) return { supported: false, count: 0 };
-  const tools = createToolDefinitions(service);
-  for (const tool of tools) {
-    // The WebMCP Challenge requires real browser-native imperative registration.
-    await document.modelContext.registerTool(tool);
+export function createWebMcpRuntime({ telemetrySink } = {}) {
+  const state = { notices: new Map(), receipts: new Map() };
+  const tools = createToolDefinitions(state);
+  const byName = new Map(tools.map((tool) => [tool.name, tool]));
+
+  async function invoke(name, input = {}, source = 'in-browser-agent') {
+    const tool = byName.get(name);
+    if (!tool) throw new Error(`Unknown WebMCP tool: ${name}`);
+    const validation = validateInput(tool.inputSchema, input);
+    telemetry({ kind: 'schema', tool: name, input, valid: validation.valid, errors: validation.errors, source, at: new Date().toISOString() }, telemetrySink);
+    if (!validation.valid) throw new TypeError(`Schema validation failed: ${validation.errors.join('; ')}`);
+    const started = nowMs();
+    telemetry({ kind: 'call', tool: name, input, source, at: new Date().toISOString() }, telemetrySink);
+    try {
+      const output = await tool.execute(input);
+      const latency_ms = Math.max(1, Math.round((nowMs() - started) * 10) / 10);
+      telemetry({ kind: 'result', tool: name, input, output, latency_ms, source, at: new Date().toISOString() }, telemetrySink);
+      return output;
+    } catch (error) {
+      const latency_ms = Math.max(1, Math.round((nowMs() - started) * 10) / 10);
+      telemetry({ kind: 'error', tool: name, input, error: error instanceof Error ? error.message : String(error), latency_ms, source, at: new Date().toISOString() }, telemetrySink);
+      throw error;
+    }
   }
-  return { supported: true, count: tools.length };
+
+  return {
+    version: 'advocate-webmcp/2.0',
+    tools,
+    listTools: () => tools.map(({ execute, ...descriptor }) => descriptor),
+    invoke,
+    get receiptCount() { return state.receipts.size; },
+    get receipts() { return [...state.receipts.values()]; }
+  };
+}
+
+export async function installAdvocateWebMcp(options = {}) {
+  const runtime = createWebMcpRuntime(options);
+  if (typeof window !== 'undefined') window.__webmcp = runtime;
+
+  const modelContext =
+    (typeof document !== 'undefined' && document.modelContext) ||
+    (typeof navigator !== 'undefined' && navigator.modelContext) ||
+    null;
+
+  if (!modelContext?.registerTool) return { runtime, native: false, registered: 0, controller: null };
+
+  const controller = new AbortController();
+  let registered = 0;
+  for (const tool of runtime.tools) {
+    const nativeTool = {
+      name: tool.name,
+      title: tool.title,
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+      annotations: tool.annotations,
+      execute: (input) => runtime.invoke(tool.name, input, 'native-webmcp-agent')
+    };
+    try {
+      await modelContext.registerTool(nativeTool, { signal: controller.signal });
+      registered += 1;
+    } catch (error) {
+      telemetry({ kind: 'registration-error', tool: tool.name, error: error instanceof Error ? error.message : String(error), at: new Date().toISOString() }, options.telemetrySink);
+    }
+  }
+  return { runtime, native: registered === runtime.tools.length, registered, controller };
 }
