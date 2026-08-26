@@ -1,0 +1,17 @@
+{
+  "name": "advocate-webmcp",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "vite --host 0.0.0.0",
+    "dev": "vite --host 0.0.0.0",
+    "build": "vite build",
+    "preview": "vite preview --host 0.0.0.0",
+    "test": "node --test",
+    "check": "npm run test && npm run build"
+  },
+  "devDependencies": {
+    "vite": "^7.1.3"
+  }
+}
