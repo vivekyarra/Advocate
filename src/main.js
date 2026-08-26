@@ -1,50 +1,174 @@
-import { IndexedDbRepository } from './repository.js';
-import { createAdvocateService } from './domain.js';
+import { AdvocateAuthClient, DataApiClient, createCloudAdvocateService } from './cloud.js';
 import { registerAdvocateTools, createToolDefinitions } from './webmcp.js';
 import { createUI } from './ui.js';
 
-const repository = new IndexedDbRepository();
-await repository.ensureSeeded();
+const $ = (selector) => document.querySelector(selector);
+const auth = new AdvocateAuthClient();
+let activeService = null;
+let ui = null;
+let toolsRegistered = false;
 
-const ui = createUI(repository);
-const service = createAdvocateService(repository, { onEvent: (event) => ui.onEvent(event) });
+const serviceRouter = new Proxy({}, {
+  get(_target, prop) {
+    if (prop === 'then') return undefined;
+    return (...args) => {
+      if (!activeService || typeof activeService[prop] !== 'function') throw new Error('Sign in to use this Advocate account tool.');
+      return activeService[prop](...args);
+    };
+  }
+});
 
-ui.bindNavigation();
-await ui.render();
-
-try {
-  const status = await registerAdvocateTools(service);
-  ui.setWebMcpStatus(status);
-} catch (error) {
-  console.error('WebMCP registration failed', error);
-  ui.setWebMcpStatus({ supported: false, error: error instanceof Error ? error.message : String(error) });
+function authMessage(message = '', kind = 'error') {
+  const box = $('#authMessage');
+  if (!message) {
+    box.textContent = '';
+    box.className = 'form-message hidden';
+    return;
+  }
+  box.textContent = message;
+  box.className = `form-message ${kind === 'success' ? 'success' : ''}`.trim();
 }
 
-document.querySelector('#approveBillOnly').addEventListener('click', async () => {
-  await service.approveResolution({ includePlan: false });
-});
+function setAuthBusy(value) {
+  $('#authView').querySelectorAll('button,input').forEach((el) => { el.disabled = value; });
+}
 
-document.querySelector('#approveBillAndPlan').addEventListener('click', async () => {
-  await service.approveResolution({ includePlan: true, planId: 'fiber-500-flex' });
-});
+function setAuthTab(tab) {
+  const signIn = tab === 'signin';
+  $('#signInTab').classList.toggle('active', signIn);
+  $('#signUpTab').classList.toggle('active', !signIn);
+  $('#signInTab').setAttribute('aria-selected', String(signIn));
+  $('#signUpTab').setAttribute('aria-selected', String(!signIn));
+  $('#signInPanel').classList.toggle('hidden', !signIn);
+  $('#signUpPanel').classList.toggle('hidden', signIn);
+  authMessage();
+}
 
-document.querySelector('#resetDemo').addEventListener('click', async () => {
-  await repository.reset();
-  location.hash = '#account';
-  location.reload();
-});
+function showAuth() {
+  activeService = null;
+  ui = null;
+  $('#appView').classList.add('hidden');
+  $('#authView').classList.remove('hidden');
+  document.title = 'Advocate — Sign in';
+  history.replaceState(null, '', location.pathname);
+  setAuthBusy(false);
+}
 
-// Small, read-only test surface for browser automation. It uses the same service and tool definitions as WebMCP.
+async function ensureTools() {
+  if (toolsRegistered) return;
+  try {
+    const status = await registerAdvocateTools(serviceRouter);
+    toolsRegistered = status.supported;
+    ui?.setWebMcpStatus(status);
+  } catch (error) {
+    console.error('WebMCP registration failed', error);
+    ui?.setWebMcpStatus({ supported: false, count: 0, error: error instanceof Error ? error.message : String(error) });
+  }
+}
+
+async function startApp(session, { name = null, demo = false } = {}) {
+  const api = new DataApiClient(() => auth.getJwt());
+  await api.rpc('ensure_advocate_account', { p_name: name, p_demo: demo });
+
+  let nextUI = null;
+  activeService = createCloudAdvocateService(api, { onEvent: (event) => nextUI?.onEvent(event) });
+  nextUI = createUI({
+    service: activeService,
+    auth,
+    session,
+    onSignOut: () => showAuth()
+  });
+  ui = nextUI;
+
+  $('#authView').classList.add('hidden');
+  $('#appView').classList.remove('hidden');
+  document.title = 'Advocate — Account';
+  await ui.init();
+  await ensureTools();
+  if (toolsRegistered) ui.setWebMcpStatus({ supported: true, count: createToolDefinitions(serviceRouter).length });
+}
+
+async function resolveSession(preferred = null) {
+  const session = preferred?.user ? preferred : await auth.getSession();
+  if (!session?.user) return null;
+  return session;
+}
+
+async function loginFlow(task, { name = null, demo = false } = {}) {
+  if (document.activeElement instanceof HTMLElement) document.activeElement.blur();
+  setAuthBusy(true);
+  authMessage();
+  try {
+    const response = await task();
+    const session = await resolveSession(response?.user ? { user: response.user, session: response.session } : null);
+    if (!session) throw new Error('Sign-in succeeded, but the browser could not establish a secure session. Please allow cookies for this site and try again.');
+    await startApp(session, { name: name || session.user.name, demo });
+  } catch (error) {
+    console.error(error);
+    authMessage(error instanceof Error ? error.message : String(error));
+    setAuthBusy(false);
+  }
+}
+
+function bindAuth() {
+  $('#signInTab').addEventListener('click', () => setAuthTab('signin'));
+  $('#signUpTab').addEventListener('click', () => setAuthTab('signup'));
+
+  $('#signInForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const email = $('#signInEmail').value.trim().toLowerCase();
+    const password = $('#signInPassword').value;
+    if (!email || !password) return authMessage('Enter your email and password.');
+    loginFlow(() => auth.signIn({ email, password, rememberMe: $('#rememberMe').checked }));
+  });
+
+  $('#signUpForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const name = $('#signUpName').value.trim();
+    const email = $('#signUpEmail').value.trim().toLowerCase();
+    const password = $('#signUpPassword').value;
+    const confirm = $('#signUpConfirm').value;
+    if (name.length < 2) return authMessage('Enter your full name.');
+    if (!email || !email.includes('@')) return authMessage('Enter a valid email address.');
+    if (password.length < 10) return authMessage('Use at least 10 characters for your password.');
+    if (password !== confirm) return authMessage('The passwords do not match.');
+    loginFlow(() => auth.signUp({ name, email, password }), { name, demo: false });
+  });
+
+  $('#demoAccess').addEventListener('click', () => {
+    const id = crypto.randomUUID().replaceAll('-', '').slice(0, 18);
+    const email = `demo-${id}@demo.advocate.app`;
+    const password = `Demo-${crypto.randomUUID()}-9a!`;
+    loginFlow(() => auth.signUp({ name: 'Jordan Lee', email, password }), { name: 'Jordan Lee', demo: true });
+  });
+}
+
+bindAuth();
+
+try {
+  const session = await auth.getSession();
+  if (session?.user) {
+    setAuthBusy(true);
+    await startApp(session, { name: session.user.name, demo: false });
+  } else {
+    showAuth();
+  }
+} catch (error) {
+  console.error('Initial session bootstrap failed', error);
+  showAuth();
+  authMessage('Account services are temporarily unavailable. Please retry sign in.');
+}
+
 Object.defineProperty(window, '__ADVOCATE_TEST__', {
   value: {
-    names: createToolDefinitions(service).map((tool) => tool.name),
+    names: createToolDefinitions(serviceRouter).map((tool) => tool.name),
     invoke: async (name, input = {}) => {
-      const tool = createToolDefinitions(service).find((candidate) => candidate.name === name);
+      const tool = createToolDefinitions(serviceRouter).find((candidate) => candidate.name === name);
       if (!tool) throw new Error(`Unknown tool: ${name}`);
       return tool.execute(input);
     },
-    approve: async (includePlan = false) => service.approveResolution({ includePlan, planId: 'fiber-500-flex' }),
-    state: () => service.getState()
+    state: () => activeService?.getState(),
+    signedIn: () => Boolean(activeService)
   },
   writable: false,
   configurable: false
