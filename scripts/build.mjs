@@ -33,9 +33,18 @@ for (const requiredCapability of ['get_notifications', 'mark_notifications_read'
 }
 if (!polishCss.includes('.auth-shell { height: 100svh') || !polishCss.includes('.sidebar {')) throw new Error('Single-viewport laptop layout guardrails are missing.');
 
+const baseStylesheet = '  <link rel="stylesheet" href="/src/styles.css">';
+const polishStylesheet = '  <link id="advocate-judge-polish-css" rel="stylesheet" href="/src/judge-polish.css">';
+if (!html.includes(baseStylesheet)) throw new Error('Base stylesheet link is missing from index.html.');
+let builtHtml = html;
+if (!builtHtml.includes('id="advocate-judge-polish-css"')) {
+  builtHtml = builtHtml.replace(baseStylesheet, `${baseStylesheet}\n${polishStylesheet}`);
+}
+if (!builtHtml.includes(polishStylesheet)) throw new Error('Judge polish stylesheet must be render-blocking in the production shell.');
+
 await rm(dist, { recursive: true, force: true });
 await mkdir(path.join(dist, 'src'), { recursive: true });
-await cp(path.join(root, 'index.html'), path.join(dist, 'index.html'));
+await writeFile(path.join(dist, 'index.html'), builtHtml, 'utf8');
 await cp(path.join(root, 'favicon.svg'), path.join(dist, 'favicon.svg'));
 await cp(path.join(root, 'src'), path.join(dist, 'src'), { recursive: true });
 await writeFile(path.join(dist, '_build.txt'), `Advocate static build\nBuilt: ${new Date().toISOString()}\n`, 'utf8');
