@@ -1,0 +1,204 @@
+/* Judge-ready viewport polish and live notification center */
+
+.capability-pill-clickable {
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+  transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+}
+.capability-pill-clickable:hover {
+  transform: translateY(-1px);
+  border-color: #b8c8dc;
+  box-shadow: 0 5px 16px rgba(33,48,78,.08);
+}
+.capability-pill-clickable:focus-visible { outline: 3px solid rgba(49,87,213,.22); outline-offset: 2px; }
+.webmcp-pill.agent-ready { color: var(--success); background: var(--success-soft); border-color: #c8ebdc; }
+
+.capability-panel {
+  position: absolute;
+  z-index: 70;
+  top: 62px;
+  right: 224px;
+  width: min(360px, calc(100vw - 28px));
+  padding: 15px 16px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+.capability-panel strong,
+.capability-panel span,
+.capability-panel small { display: block; }
+.capability-panel strong { font-size: 14px; }
+.capability-panel span { margin-top: 5px; color: #445168; font-size: 13px; line-height: 1.45; }
+.capability-panel small { margin-top: 8px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+.capability-panel .capability-state { display: inline-flex; align-items: center; gap: 7px; margin-top: 10px; color: var(--success); font-weight: 800; }
+
+.notification-wrap { position: relative; }
+.notification-button {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  background: var(--surface);
+  color: #4d5b72;
+  cursor: pointer;
+  transition: transform .15s ease, background .15s ease, border-color .15s ease;
+}
+.notification-button:hover { transform: translateY(-1px); background: var(--surface-soft); border-color: #bcc9db; }
+.notification-button svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.notification-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 900;
+}
+.notification-menu {
+  position: absolute;
+  z-index: 80;
+  top: calc(100% + 9px);
+  right: 0;
+  width: min(390px, calc(100vw - 28px));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 20px 50px rgba(29,43,70,.16);
+}
+.notification-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 16px 12px;
+  border-bottom: 1px solid var(--line);
+}
+.notification-head strong { font-size: 15px; }
+.notification-head span { color: var(--muted); font-size: 11px; }
+.notification-list { max-height: min(440px, calc(100vh - 150px)); overflow-y: auto; }
+.notification-item {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 34px minmax(0,1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 13px 15px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.notification-item:last-child { border-bottom: 0; }
+.notification-item:hover { background: var(--surface-soft); }
+.notification-item.unread { background: #fbfcff; }
+.notification-icon {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 11px;
+  background: var(--surface-strong);
+  color: #52627a;
+  font-size: 15px;
+  font-weight: 900;
+}
+.notification-item.unread .notification-icon { background: var(--accent-soft); color: var(--accent); }
+.notification-copy { min-width: 0; }
+.notification-copy strong,
+.notification-copy span,
+.notification-copy small { display: block; }
+.notification-copy strong { font-size: 13px; }
+.notification-copy span { margin-top: 3px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.notification-copy small { margin-top: 5px; color: #8b96a8; font-size: 10px; }
+.notification-unread-dot { width: 7px; height: 7px; margin-top: 6px; border-radius: 50%; background: var(--accent); }
+.notification-empty { padding: 26px 18px; text-align: center; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.notification-foot { padding: 9px 12px; border-top: 1px solid var(--line); background: var(--surface-soft); color: var(--muted); font-size: 10px; text-align: center; }
+
+/* Desktop/laptop auth must fit a single viewport without nested scrolling. */
+@media (min-width: 761px) {
+  .auth-shell { height: 100svh; min-height: 620px; overflow: hidden; }
+  .auth-header { height: 68px; padding: 14px 30px; }
+  .auth-main {
+    height: calc(100svh - 68px);
+    min-height: 0;
+    padding: 18px 30px 24px;
+    gap: clamp(34px, 5vw, 68px);
+    align-items: center;
+  }
+  .auth-story h1 { font-size: clamp(38px, 5vw, 60px); }
+  .auth-lead { margin: 16px 0 22px; font-size: 16px; line-height: 1.55; }
+  .benefit-list { gap: 10px; }
+  .benefit-icon { width: 27px; height: 27px; border-radius: 9px; }
+  .benefit-list strong { margin: 0 0 2px; font-size: 14px; }
+  .benefit-list small { font-size: 12px; line-height: 1.4; }
+  .auth-card { padding: 20px 22px; border-radius: 20px; max-height: calc(100svh - 104px); overflow: hidden; }
+  .auth-tabs { padding: 3px; }
+  .auth-tab { min-height: 38px; }
+  .form-heading { margin: 15px 0 13px; }
+  .form-heading h2 { font-size: 21px; margin-bottom: 4px; }
+  .form-heading p { font-size: 12px; }
+  .stack-form { gap: 9px; }
+  .stack-form label { gap: 5px; font-size: 12px; }
+  .auth-card input { min-height: 40px; padding: 8px 10px; }
+  .auth-card .button { min-height: 40px; padding-block: 8px; }
+  .auth-divider { margin: 13px 0; }
+  .auth-footnote { margin-top: 7px; font-size: 10px; line-height: 1.35; }
+  .form-message { margin-top: 8px; padding: 8px 10px; }
+
+  /* Keep the entire account navigation visible on a standard laptop screen. */
+  .sidebar {
+    height: calc(100svh - 72px);
+    padding: 13px 12px;
+    gap: 10px;
+    overflow: hidden;
+  }
+  .nav-list { gap: 2px; }
+  .nav-item { min-height: 39px; padding: 0 10px; }
+  .nav-separator { margin: 5px 6px; }
+  .sidebar-account-card { padding: 11px 12px; gap: 4px; }
+  .sidebar-account-card > span:not(.mini-status) { font-size: 11px; line-height: 1.3; }
+  .mini-status { padding: 4px 7px; }
+}
+
+@media (min-width: 761px) and (max-height: 700px) {
+  .auth-main { padding-top: 10px; padding-bottom: 14px; }
+  .auth-story h1 { font-size: clamp(34px, 4.5vw, 52px); }
+  .auth-lead { margin: 12px 0 16px; font-size: 15px; }
+  .benefit-list { gap: 7px; }
+  .auth-card { padding: 15px 18px; max-height: calc(100svh - 86px); }
+  .form-heading { margin: 10px 0 9px; }
+  .stack-form { gap: 6px; }
+  .auth-card input { min-height: 37px; }
+  .auth-card .button { min-height: 37px; }
+  .auth-divider { margin: 9px 0; }
+  .auth-footnote { margin-top: 5px; }
+  .sidebar { padding-top: 8px; padding-bottom: 8px; }
+  .nav-item { min-height: 35px; }
+  .sidebar-account-card { padding: 8px 10px; }
+}
+
+@media (max-width: 760px) {
+  .capability-panel { right: 12px; top: 64px; }
+  .notification-menu { right: -54px; }
+}
+
+@media (max-width: 540px) {
+  .notification-button { width: 40px; height: 40px; }
+  .notification-menu { position: fixed; top: 66px; right: 10px; left: 10px; width: auto; }
+  .notification-list { max-height: calc(100svh - 180px); }
+}
