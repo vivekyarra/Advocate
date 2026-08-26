@@ -10,7 +10,7 @@ export function installJudgePolishStyles() {
   const link = document.createElement('link');
   link.id = STYLE_ID;
   link.rel = 'stylesheet';
-  link.href = '/src/judge-polish.css';
+  link.href = new URL('./judge-polish.css', import.meta.url).href;
   document.head.append(link);
 }
 
