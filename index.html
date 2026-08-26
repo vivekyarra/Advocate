@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Advocate is a WebMCP-native ISP account portal where customer agents can investigate billing problems and execute approved fixes." />
+    <meta name="theme-color" content="#f7f8fb" />
+    <title>Advocate — Customer Account</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <script type="module" src="/src/main.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <a class="brand" href="#account" aria-label="Advocate account home">
+          <span class="brand-mark" aria-hidden="true">A</span>
+          <span>Advocate</span>
+        </a>
+        <div class="topbar-actions">
+          <span id="webmcpStatus" class="status-pill" aria-live="polite">
+            <span class="status-dot" aria-hidden="true"></span>
+            Checking WebMCP
+          </span>
+          <button id="resetDemo" class="icon-button" type="button" title="Reset demo account" aria-label="Reset demo account">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.93 4.93A10 10 0 1 1 2 12h2a8 8 0 1 0 2.34-5.66L9 9H2V2l2.93 2.93Z"/></svg>
+          </button>
+          <div class="avatar" aria-label="Demo customer profile">JL</div>
+        </div>
+      </header>
+
+      <aside class="sidebar" aria-label="Account navigation">
+        <nav>
+          <a class="nav-item active" href="#account" data-panel="account">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 3 10v11h7v-6h4v6h7V10L12 3Z"/></svg>
+            <span>Account</span>
+          </a>
+          <a class="nav-item" href="#bill" data-panel="bill">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 2h12v20l-3-2-3 2-3-2-3 2V2Zm3 5h6v2H9V7Zm0 4h6v2H9v-2Z"/></svg>
+            <span>Bill</span>
+          </a>
+          <a class="nav-item" href="#usage" data-panel="usage">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16v2H2V3h2v16Zm3-3 3-4 3 2 5-7 2 1-6 9-3-2-2 3-2-2Z"/></svg>
+            <span>Usage</span>
+          </a>
+          <a class="nav-item" href="#outages" data-panel="outages">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 1 21h22L12 2Zm1 14h-2v-5h2v5Zm0 3h-2v-2h2v2Z"/></svg>
+            <span>Outages</span>
+          </a>
+          <a class="nav-item" href="#support" data-panel="support">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a9 9 0 0 0-9 9v7a3 3 0 0 0 3 3h3v-8H5v-2a7 7 0 1 1 14 0v2h-4v8h3a3 3 0 0 0 3-3v-7a9 9 0 0 0-9-9Z"/></svg>
+            <span>Support</span>
+          </a>
+        </nav>
+        <div class="sidebar-foot">
+          <p>Demo account</p>
+          <strong>•••• 4821</strong>
+        </div>
+      </aside>
+
+      <main id="mainContent" class="content" tabindex="-1">
+        <section id="account" class="page-section active" aria-labelledby="accountTitle">
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">Home internet</p>
+              <h1 id="accountTitle">Good afternoon, Jordan</h1>
+              <p>Fiber 500 · Account ending in 4821</p>
+            </div>
+            <span class="account-state">Good standing</span>
+          </div>
+
+          <div class="overview-grid">
+            <article id="billCard" class="card bill-card" data-focus-target="bill">
+              <div class="card-kicker">Current bill</div>
+              <div class="amount-row">
+                <span id="currentAmount" class="amount">$94.37</span>
+                <span id="billDelta" class="delta up">+$35.37</span>
+              </div>
+              <p>Previous month <strong id="previousAmount">$59.00</strong></p>
+              <div class="bill-meta">
+                <span>Due Sep 5</span>
+                <span>AutoPay on</span>
+              </div>
+              <a href="#bill" class="text-link">View bill <span aria-hidden="true">→</span></a>
+            </article>
+
+            <article id="outageCard" class="card outage-card" data-focus-target="outages">
+              <div class="card-row">
+                <div>
+                  <div class="card-kicker">Service history</div>
+                  <h2>Outage confirmed</h2>
+                </div>
+                <span class="warning-badge">Resolved</span>
+              </div>
+              <div class="outage-detail">
+                <span class="outage-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 2 1 21h22L12 2Zm1 14h-2v-5h2v5Zm0 3h-2v-2h2v2Z"/></svg>
+                </span>
+                <div>
+                  <strong>Saturday, Aug 22</strong>
+                  <p>6h 42m · Network interruption</p>
+                </div>
+              </div>
+              <a href="#outages" class="text-link">View outage history <span aria-hidden="true">→</span></a>
+            </article>
+
+            <article class="card plan-card">
+              <div class="card-kicker">Current plan</div>
+              <div class="plan-line">
+                <div>
+                  <h2 id="currentPlanName">Fiber 500</h2>
+                  <p>500 Mbps · Unlimited data</p>
+                </div>
+                <strong id="currentPlanPrice">$84/mo</strong>
+              </div>
+              <div class="promo-ended">
+                <span aria-hidden="true">i</span>
+                Promotional price ended Aug 1
+              </div>
+            </article>
+          </div>
+
+          <section id="resolutionCenter" class="resolution-center" aria-live="polite">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Resolution center</p>
+                <h2>Account review</h2>
+              </div>
+              <span id="caseStatus" class="case-status">No active review</span>
+            </div>
+
+            <div id="idleResolution" class="empty-resolution">
+              <div class="shield-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5.5 3.4 9.8 8 11 4.6-1.2 8-5.5 8-11V5l-8-3Zm-1 14-4-4 1.4-1.4 2.6 2.6 4.6-4.6L17 10l-6 6Z"/></svg>
+              </div>
+              <div>
+                <h3>Your account is ready for review</h3>
+                <p>When your agent investigates a bill or outage, verified findings and approvals appear here.</p>
+              </div>
+            </div>
+
+            <div id="investigationView" class="investigation hidden">
+              <div class="investigation-layout">
+                <div>
+                  <h3>What changed</h3>
+                  <div id="comparisonRows" class="finding-list"></div>
+                </div>
+                <div>
+                  <h3>Verified entitlements</h3>
+                  <div id="entitlementRows" class="finding-list"></div>
+                </div>
+              </div>
+            </div>
+
+            <article id="fixCard" class="fix-card hidden">
+              <div class="fix-card-head">
+                <div>
+                  <span class="success-kicker">Verified</span>
+                  <h3>We found <span id="fixCount">0</span> fixes</h3>
+                </div>
+                <div class="recovery-total">
+                  <span>Total recovery</span>
+                  <strong id="recoveryTotal">$0.00</strong>
+                </div>
+              </div>
+              <div id="fixRows" class="fix-rows"></div>
+              <div id="planOpportunity" class="plan-opportunity hidden">
+                <div>
+                  <span>Your promotional price ended.</span>
+                  <div class="plan-compare">
+                    <div><small>Current plan</small><strong>$84/mo</strong></div>
+                    <span aria-hidden="true">→</span>
+                    <div><small>Equivalent current plan</small><strong>$67/mo</strong></div>
+                  </div>
+                </div>
+                <span class="save-badge">Save $17/mo</span>
+              </div>
+              <div id="approvalActions" class="approval-actions">
+                <button id="approveBillOnly" class="button secondary" type="button">Fix bill only — $23.17 recovered</button>
+                <button id="approveBillAndPlan" class="button primary" type="button">Fix bill + switch plan — save $17/month</button>
+              </div>
+              <div id="approvalNotice" class="approval-notice hidden" role="status"></div>
+            </article>
+
+            <article id="receiptCard" class="receipt-card hidden">
+              <div class="receipt-head">
+                <div class="receipt-check" aria-hidden="true">✓</div>
+                <div>
+                  <span class="success-kicker">Resolved</span>
+                  <h3>Resolution receipt</h3>
+                </div>
+              </div>
+              <dl id="receiptRows" class="receipt-grid"></dl>
+              <div class="receipt-foot">
+                <span id="receiptCase"></span>
+                <span id="receiptTime"></span>
+              </div>
+            </article>
+          </section>
+
+          <section class="activity-section">
+            <div class="section-heading compact">
+              <div>
+                <p class="eyebrow">Live account activity</p>
+                <h2>What your agent is doing</h2>
+              </div>
+              <span id="activityCount" class="activity-count">0 actions</span>
+            </div>
+            <ol id="activityLog" class="activity-log">
+              <li class="activity-empty">No agent actions yet.</li>
+            </ol>
+          </section>
+        </section>
+
+        <section id="bill" class="page-section" aria-labelledby="billTitle">
+          <div class="page-heading">
+            <div><p class="eyebrow">Billing</p><h1 id="billTitle">Your bill</h1><p>August 2026 statement</p></div>
+          </div>
+          <article class="card statement-card">
+            <div class="statement-summary"><span>Amount due</span><strong id="statementDue">$94.37</strong></div>
+            <div id="chargeRows" class="statement-lines"></div>
+            <div class="statement-total"><span>Total</span><strong id="statementTotal">$94.37</strong></div>
+          </article>
+        </section>
+
+        <section id="usage" class="page-section" aria-labelledby="usageTitle">
+          <div class="page-heading"><div><p class="eyebrow">Usage</p><h1 id="usageTitle">Internet usage</h1><p>Unlimited data on Fiber 500</p></div></div>
+          <article class="card usage-card">
+            <div><span>This billing cycle</span><strong>612 GB</strong></div>
+            <div class="usage-meter"><span style="width:61%"></span></div>
+            <p>No overage fees. Your plan includes unlimited data.</p>
+          </article>
+        </section>
+
+        <section id="outages" class="page-section" aria-labelledby="outagesTitle">
+          <div class="page-heading"><div><p class="eyebrow">Reliability</p><h1 id="outagesTitle">Outage history</h1><p>Service events for your address</p></div></div>
+          <article class="card outage-history-card">
+            <div class="history-date">Aug 22</div>
+            <div><strong>Network interruption</strong><p>9:08 AM – 3:50 PM · 6h 42m</p></div>
+            <span class="warning-badge">Confirmed</span>
+          </article>
+        </section>
+
+        <section id="support" class="page-section" aria-labelledby="supportTitle">
+          <div class="page-heading"><div><p class="eyebrow">Support</p><h1 id="supportTitle">Support without the hold music</h1><p>Your agent can use this account portal's structured WebMCP tools directly.</p></div></div>
+          <div class="support-grid">
+            <article class="card"><h2>Billing policies</h2><p>Verified service outages may qualify for a prorated reliability credit. Incorrect one-time fees are refundable.</p></article>
+            <article class="card"><h2>Human approval</h2><p>Account-changing tools enforce approval scopes from this page. Plan changes are blocked until you explicitly approve the exact plan.</p></article>
+          </div>
+        </section>
+      </main>
+    </div>
+  </body>
+</html>
