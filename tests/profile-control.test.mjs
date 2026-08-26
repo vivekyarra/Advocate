@@ -16,7 +16,7 @@ test('top-right profile button has a real click interaction', () => {
 test('profile control stays clickable above notification and capability layers', () => {
   assert.match(polish, /\.topbar-right\s*\{[^}]*isolation:\s*isolate/s);
   assert.match(polish, /\.profile-menu-wrap\s*\{[^}]*z-index:\s*100[^}]*pointer-events:\s*auto/s);
-  assert.match(polish, /\.profile-button\s*\{[^}]*z-index:\s*2[^}]*pointer-events:\s*auto/s);
+  assert.match(polish, /\.profile-button\s*\{[^}]*z-index:\s*2[^}]*pointer-events:\s*auto[^}]*touch-action:\s*manipulation/s);
   assert.match(polish, /\.profile-menu\s*\{[^}]*z-index:\s*110[^}]*pointer-events:\s*auto/s);
   assert.match(polish, /\.notification-wrap\s*\{[^}]*z-index:\s*80/s);
   assert.match(polish, /\.capability-panel\s*\{[^}]*z-index:\s*70/s);
