@@ -1,8 +1,9 @@
 import { access, cp, mkdir, readFile, rm } from 'node:fs/promises';
 import { constants } from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const root = path.resolve(new URL('..', import.meta.url).pathname);
+const root = fileURLToPath(new URL('..', import.meta.url));
 const dist = path.join(root, 'dist');
 const required = ['index.html', 'favicon.svg', 'src/main.js', 'src/webmcp.js', 'src/styles.css'];
 for (const file of required) await access(path.join(root, file), constants.R_OK);
